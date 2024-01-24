@@ -6,6 +6,7 @@ import static com.qualcomm.robotcore.util.ElapsedTime.Resolution.SECONDS;
 
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
+import com.acmerobotics.roadrunner.trajectory.constraints.TrajectoryVelocityConstraint;
 import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -24,6 +25,8 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 import org.firstinspires.ftc.vision.VisionPortal;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.tfod.TfodProcessor;
 
 import java.util.List;
@@ -41,7 +44,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
     private static final String[] LABELS = {
             "Blue Prop", "Red Prop"
     };
-
+    private AprilTagProcessor aprilTag;
     private CRServo spinny;
 
     public SampleMecanumDrive drive;
@@ -55,12 +58,24 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
     private DcMotor ArmPos = null;
     private Servo mustaches;
     private Servo ilifty;
-
+    private DistanceSensor sensorDistance;
+    private DistanceSensor sensorDistance2;
+    private DistanceSensor sensorDistancer;
+    private DistanceSensor sensorDistancel;
+    private DistanceSensor sensorDistanceb;
+    private DcMotor front_left = null;
+    private DcMotor front_right = null;
+    private DcMotor rear_left = null;
+    private DcMotor rear_right = null;
+    int use_tfod = 1;
+    int use_apriltag = 2;
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     //Vision parameters
     private TfodProcessor tfod;
     private VisionPortal visionPortal;
+
+    private VisionPortal myVisionPortal;
 
     //Define and declare Robot Starting Locations
     public enum START_POSITION{
@@ -84,6 +99,10 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         drive = new SampleMecanumDrive(hardwareMap);  //Moved from void automation
         sensors sense = new sensors(hardwareMap);                        //Moved from void automation
         spinny = hardwareMap.get(CRServo.class, "spinny");
+        front_left = hardwareMap.get(DcMotor.class, "front_left");
+        front_right = hardwareMap.get(DcMotor.class, "front_right");
+        rear_left = hardwareMap.get(DcMotor.class, "rear_left");
+        rear_right = hardwareMap.get(DcMotor.class, "rear_right");
         Arm1 = hardwareMap.get(DcMotor.class, "Arm1");
         Arm2 = hardwareMap.get(DcMotor.class, "Arm2");
         elbow1 = hardwareMap.get(Servo.class, "elbow1");
@@ -93,6 +112,15 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         flippy = hardwareMap.get(Servo.class, "flippy");
         mustaches = hardwareMap.get(Servo.class, "mustaches");
         ilifty = hardwareMap.get(Servo.class, "lifty2");
+        sensorDistance = hardwareMap.get(DistanceSensor.class, "sensorDistance");
+        sensorDistance2 = hardwareMap.get(DistanceSensor.class, "sensorDistance2");
+        sensorDistancel = hardwareMap.get(DistanceSensor.class, "dis_left");
+        sensorDistancer = hardwareMap.get(DistanceSensor.class, "dis_right");
+        sensorDistanceb = hardwareMap.get(DistanceSensor.class, "dis_rear");
+        Rev2mDistanceSensor sensorTimeOfFlight = (Rev2mDistanceSensor) sensorDistance;
+        Rev2mDistanceSensor sensorTimeOfFlight2 = (Rev2mDistanceSensor) sensorDistance2;
+        SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
+        Pose2d poseEstimate = drive.getPoseEstimate();
         Arm1.setDirection(DcMotor.Direction.FORWARD);
         Arm2.setDirection(DcMotor.Direction.REVERSE);
         ArmPos.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -100,13 +128,11 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         Arm2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         elbow1.setDirection(Servo.Direction.REVERSE);
         ilifty.setPosition(.3);
-
-        //Key Pay inputs to selecting Starting Position of robot
-        grabby.setPosition(.79);
-        mustaches.setPosition(.28);
         selectStartingPosition();
-        //Activate Camera Vision that uses TensorFlow for pixel detection
-        initTfod();
+        //Key Pay inputs to selecting Starting Position of robot
+        initDoubleVision();
+        myVisionPortal.setProcessorEnabled(aprilTag, false);
+        myVisionPortal.setProcessorEnabled(tfod, true);
 
         // Wait for the DS start button to be touched.
         telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
@@ -118,8 +144,13 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
             telemetry.addData("Selected Starting Position", startPosition);
 
             //Run Vuforia Tensor Flow and keep watching for the identifier in the Signal Cone.
-            //runTfodTensorFlow();
-            identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.MIDDLE;  //REMOVE!!!!
+            myVisionPortal.setProcessorEnabled(aprilTag, true);
+            myVisionPortal.setProcessorEnabled(tfod, false);
+            telemetryAprilTag();
+            myVisionPortal.setProcessorEnabled(aprilTag, false);
+            myVisionPortal.setProcessorEnabled(tfod, true);
+            runTfodTensorFlow();
+            //identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.RIGHT;  //REMOVE!!!!
 
             telemetry.addData("Vision identified Parking Location", identifiedSpikeMarkLocation);
             telemetry.update();
@@ -128,14 +159,16 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         //Game Play Button  is pressed
         if (opModeIsActive() && !isStopRequested()) {
             //Build parking trajectory based on last detected target by vision
+            myVisionPortal.setProcessorEnabled(aprilTag, true);
+            myVisionPortal.setProcessorEnabled(tfod, false);
             runAutonoumousMode();
         }
-    }   // end runOpMode()
+    }   // end runOpMode // end runOpMode()
     private void stack1() {
         spinny.setPower(1);
         flippy.setPosition(.475);
         mustaches.setPosition(.42);
-        safeWaitSeconds(.5);
+        safeWaitSeconds(.6);
     }
     public void stack2() {
         mustaches.setPosition(.68);
@@ -147,66 +180,198 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
     }
     public void stopp() {
         spinny.setPower(0);
-        flippy.setPosition(.13);
+        flippy.setPosition(.23);
     }
     public void release() {
         ilifty.setPosition(.3);
         mustaches.setPosition(.68);
-        safeWaitSeconds(.4);
+        safeWaitSeconds(.1);
+    }
+    public void b(){
+        elbow1.setPosition(.91);
+        wristy.setPosition((float) .6 + 3/355);
+        armpose(0);
     }
     public void pick(){
-        double xpress = 2;
-        double counter3 = 0;
-        double pickflip = .13 ;
         double grabIn = 1;
-        double grabOut = .85;
-        double flippydoo = pickflip;
-        float wristIn = (float) ((float) .6 + 4/355);
-        while (xpress != 1) {
-            if (xpress == 2 && counter3 < 2) {
-                counter3 += 1;
-            } else if (xpress == 2 && counter3 >= 2) {
-                flippy.setPosition(flippydoo);
-                xpress = 3;
-                counter3 = 0;
-            } else if (xpress == 3 && counter3 < 12) {
-                counter3 += 1;
-            } else if (xpress == 3 && counter3 >= 12) {
-                elbow1.setPosition(1);
-                xpress = 4;
-                counter3 = 0;
-            } else if (xpress == 4 && counter3 < 4) {
-                counter3 += 1;
-            } else if (xpress == 4 && counter3 >= 4) {
-                grabby.setPosition(grabOut);
-                xpress = 5;
-                counter3 = 0;
-            } else if (xpress == 5 && counter3 < 7) {
-                counter3 += 1;
-            } else if (xpress == 5 && counter3 >= 7) {
-                flippydoo = .5;
-                flippy.setPosition(flippydoo);
-                xpress = 6;
-                counter3 = 0;
-            } else if (xpress == 6 && counter3 < 12) {
-                counter3 += 1;
-            } else if (xpress == 6 && counter3 >= 12) {
-                elbow1.setPosition(.91);
-                xpress = 1;
-                counter3 = 0;
-                wristy.setPosition(wristIn);
+        grabby.setPosition(grabIn);
+        wristy.setPosition((float) ((float) .65 + 3/355));
+        safeWaitSeconds(.25);//
+        elbow1.setPosition(1);
+        safeWaitSeconds(.5);//
+        grabby.setPosition(.75);
+        safeWaitSeconds(.2);//
+        flippy.setPosition(.5);
+        elbow1.setPosition(.91);
+    }
+    public Pose2d getaprilpose(int id, int x, int y, int angle) {
+        float xpose = 0;
+        float ypose = 0;
+        AprilTagDetection desiredTag = null;
+        while(xpose == 0) {
+            List<AprilTagDetection> currentDetections = aprilTag.getDetections();
+            for (AprilTagDetection detection : currentDetections) {
+                if (detection.metadata != null) {
+                    //  Check to see if we want to track towards this tag.
+                    if ((detection.id == id)) {
+                        // Yes, we want to use this tag.
+                        desiredTag = detection;
+                        telemetry.addData("dis", String.valueOf(desiredTag.ftcPose.y), desiredTag.ftcPose.x);
+                        telemetry.update();
+                        xpose = (int) desiredTag.ftcPose.x;
+                        ypose = (int) desiredTag.ftcPose.y;
+                        xpose += 7;
+                        ypose -= 5.5;
+                        if(y < 0){
+                            y -= ypose;
+                        }else {
+                            y += ypose;
+                        }
+                        x += xpose;
+                    } else {
+
+                    }
+                }
+
             }
         }
+        return new Pose2d(x, y, Math.toRadians(angle));
     }
+    public double dis(String side) {
+        double dis = 1;
+        if (side == "front") {
+            dis = (sensorDistance.getDistance(DistanceUnit.INCH) + sensorDistance2.getDistance(DistanceUnit.INCH)) / 2;
+        }
+        if (side == "frontr") {
+            dis = sensorDistance2.getDistance(DistanceUnit.INCH);
+        }
+        if (side == "frontl") {
+            dis = sensorDistance.getDistance(DistanceUnit.INCH);
+        }
+        if (side == "right") {
+            dis = sensorDistancer.getDistance(DistanceUnit.INCH);;
+        }
+        if (side == "left") {
+            dis = sensorDistancel.getDistance(DistanceUnit.INCH);;
+        }
+        if (side == "back") {
+            dis = sensorDistanceb.getDistance(DistanceUnit.INCH);;
+        }
+        return dis;
+    }
+
+    public double distancechange(float num, String side){
+        double dis = dis(side);
+        dis = dis - num;
+        return dis;
+    }
+    public double distancechanges(float num, String side){
+        double dis = dis(side);
+        if (dis < 10){
+             dis = 0;
+        }
+        dis = dis - num;
+        return dis;
+    }
+    public void drop(){
+        wristy.setPosition(0);
+        grabby.setPosition(1);
+        double grab = 1;
+        double dis = sensorDistance.getDistance(DistanceUnit.INCH) + sensorDistance2.getDistance(DistanceUnit.INCH);
+        dis /= 2;
+        double dis2 = dis + 1;
+        while (grab == 1){
+            if (dis2 > dis) {
+                dis = (sensorDistance.getDistance(DistanceUnit.INCH) + sensorDistance2.getDistance(DistanceUnit.INCH))/2;
+                front_left.setPower(-.2);
+                front_right.setPower(-.2);
+                rear_left.setPower(-.2);
+                rear_right.setPower(-.2);
+            } else{
+                front_left.setPower(0);
+                front_right.setPower(0);
+                rear_left.setPower(0);
+                rear_right.setPower(0);
+                grab = 2;
+            }
+        }
+        safeWaitSeconds(1);
+        /*grabby.setPosition(.75);
+        armpose(0);
+        dis2 = dis - .6;
+        while (grab == 2){
+            if (dis > dis2) {
+                dis = (sensorDistance.getDistance(DistanceUnit.INCH) + sensorDistance2.getDistance(DistanceUnit.INCH))/2;
+                front_left.setPower(.2);
+                front_right.setPower(.2);
+                rear_left.setPower(.2);
+                rear_right.setPower(.2);
+            } else{
+                front_left.setPower(0);
+                front_right.setPower(0);
+                rear_left.setPower(0);
+                rear_right.setPower(0);
+                grab = 3;
+            }
+        }
+        grabby.setPosition(1);
+        wristy.setPosition(0);
+        safeWaitSeconds(.5);*/
+        b();
+        safeWaitSeconds(2);
+    }
+
     public void armout(){
+        armpose(-4);
         elbow1.setPosition(0);
-        wristy.setPosition((20 + 3 + -5 * 1.4 - 4 * 1.4) / 355);
-        safeWaitSeconds(.4);
+        wristy.setPosition(.0293);
+    }
+    public double distancechange(int now, int later, String sensor){
+        if(now - 7 - 8.375 > dis(sensor)){
+            later -= (int) (now - (dis(sensor) + 8.375));
+            later = (int) distancechange(later, sensor);
+        }else{
+            later = (int) distancechange(later, sensor);
+        }
+
+        return later;
+    }
+    public void armpose(int pose){
+        double ticks = 22.76;
+        double armAngle = ArmPos.getCurrentPosition() / ticks - 25;
+        while (armAngle != pose) {
+            armAngle = ArmPos.getCurrentPosition() / ticks - 25;
+            if (pose < armAngle + 1 && pose > armAngle - 1) {// Stop arm movement within a 4 degree range
+                Arm1.setPower(0);
+                Arm2.setPower(0);
+                break;
+
+            } else if (pose > armAngle + 8 || pose < armAngle - 8) {//  Far and fast arm move into position within an infinite range
+                if (pose < armAngle) {
+                    Arm1.setPower(1);
+                    Arm2.setPower(1);
+                }
+                if (pose > armAngle) {
+                    Arm1.setPower(-1);
+                    Arm2.setPower(-1);
+                }
+
+            } else { //Close and slow arm move into position if arm is in a 16 degree range
+                if (pose < armAngle) {
+                    Arm1.setPower(.2);
+                    Arm2.setPower(.2);
+                }
+                if (pose > armAngle) {
+                    Arm1.setPower(-.2);
+                    Arm2.setPower(-.2);
+                }
+
+            }
+        }
     }
     public void runAutonoumousMode() {
         //Initialize Pose2d as desired
         //SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);  //Moved with other hardware mapping
-        sensors sense = new sensors(hardwareMap);
 
         TrajectorySequence traj1 = drive.trajectorySequenceBuilder(new Pose2d())
                 .forward(1)
@@ -248,197 +413,672 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                 .splineTo(new Vector2d(30, 30), 0)
                 .build();
 
+        double ticks = 22.76;
+        double armAngle = ArmPos.getCurrentPosition() / ticks - 25;
+        double serAdjust = -7;
+        elbow1.setPosition(.91);
+        double grabIn = 1;
+        float wristIn = (float) ((float) .6 + serAdjust/355);
+        grabby.setPosition(.77);
+        safeWaitSeconds(.25);
+        wristy.setPosition(wristIn);
+        double grabOut = .79;
+        float servoDegree = 1 / 355;
+        telemetry.update();
+        armpose(-10);
+
         //Move robot to dropPurplePixel based on identified Spike Mark Location
         while(opModeIsActive()) {
-            double ticks = 22.76;
-            double armAngle = ArmPos.getCurrentPosition() / ticks - 22.5;
-            double serAdjust = -7;
-            float wristIn = (float) ((float) .6 + serAdjust/355);
-            wristy.setPosition(wristIn);
-            elbow1.setPosition(.91);
-            double grabIn = 1;
-            double grabOut = .79;
-            float servoDegree = 1 / 355;
-            telemetry.update();
-            if (4 > armAngle + 12 || 4 < armAngle -4) {//  Far and fast arm move into position within an infinite range
-                if (4 < armAngle) {
-                    Arm1.setPower(.8);
-                    Arm2.setPower(.8);
-                }
-                if (4 > armAngle) {
-                    Arm1.setPower(-.7);
-                    Arm2.setPower(-.7);
-                }
-            } else if (4 > armAngle + 5 || 4 < armAngle + 3) { //Close and slow arm move into position if arm is in a 16 degree range
-                if (4 < armAngle) {
-                    Arm1.setPower(.15);
-                    Arm2.setPower(.15);
-                }
-                if (4 > armAngle) {
-                    Arm1.setPower(-.15);
-                    Arm2.setPower(-.15);
-                }
-            } else {
-                Arm1.setPower(0);
-                Arm2.setPower(0);
-                break;
+
+            //For Blue Right and Red Left, intake pixel from stack
+            if (startPosition == FTCOpenSourceAutonomous.START_POSITION.BLUE_FAR ||
+                    startPosition == FTCOpenSourceAutonomous.START_POSITION.RED_FAR) {
+
             }
-        }
 
+            switch (startPosition) {
+                case BLUE_NEAR:
+                    //drive = new SampleMecanumDrive(hardwareMap);
+                    switch (identifiedSpikeMarkLocation) {
+                        case RIGHT:
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .splineTo(new Vector2d(28, -4), Math.toRadians(90))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineToLinearHeading(new Pose2d(28, 5, Math.toRadians(90)))
+                                    .lineToLinearHeading(new Pose2d(31, 25, Math.toRadians(-90)))
+                                    .build();
 
-        //For Blue Right and Red Left, intake pixel from stack
-        if (startPosition == FTCOpenSourceAutonomous.START_POSITION.BLUE_FAR ||
-                startPosition == FTCOpenSourceAutonomous.START_POSITION.RED_FAR) {
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            armout();
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())//read distance from wall to the right
+                                    .forward(distancechange(4, "frontl"))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);//make adjustment based on distance from wall to the right
+                            drop();
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
+                                    .lineToLinearHeading(new Pose2d(1, 29, Math.toRadians(90)))
+                                    .build();
 
-        }
+                            drive.followTrajectorySequence(traj7);//drive to stack
+                            safeWaitSeconds(20);/*
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
+                                    .lineToLinearHeading(new Pose2d(50, 74, Math.toRadians(90)))
+                                    .build();
 
-        switch (startPosition) {
-            case BLUE_NEAR:
-                //drive = new SampleMecanumDrive(hardwareMap);
-                switch(identifiedSpikeMarkLocation){
-                    case RIGHT:
+                            drive.followTrajectorySequence(traj7);//drive to stack
 
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(21.5, 74, Math.toRadians(90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .forward(distancechange(4,"frontr"))
+                                    //.strafeRight(distancechange(32, "right"))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                            /*in();
+                            traj6 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .strafeLeft(23)
+                                    .build();
+                            drive.followTrajectorySequence(traj6);
+                            stopp();
+                            traj4 = drive.trajectorySequenceBuilder(traj6.end())
+                                    .back(93)
+                                    //.forward(distancechange(10, "back"))
+                                    .build();
+                            drive.followTrajectorySequence(traj4);
+                            pick();
+                            traj8 = drive.trajectorySequenceBuilder(traj4.end())
+                                    .lineToLinearHeading(new Pose2d(26, 82, Math.toRadians(90)))
+                                    //.strafeRight(distancechange(32, "right"))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            armout();
+                            traj9 = drive.trajectorySequenceBuilder(traj8.end())
+                                    .strafeLeft(distancechange(25,"left"))
+                                    .forward(distancechange(4 , "front"))
+                                    .build();
+                            drive.followTrajectorySequence(traj9);
+                            drop();*/
+                            break;
 
-                        break;
-                    case MIDDLE:
+                        //----------------------------------------------------------------------------//
+                        ////////////////////////////////////////////////////////////////////////////////
+                        // ---------------------------------------------------------------------------//
 
-                        break;
-                    case LEFT:
+                        case MIDDLE:
+                            // purple drop
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .lineTo(new Vector2d(31, 5))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineTo(new Vector2d(23, 5))
+                                    .lineToLinearHeading(new Pose2d(26, 25, Math.toRadians(90)))
+                                    .build();
 
-                        break;
-                }
-                /*midwayPose1 = new Pose2d(14, 13, Math.toRadians(45));
-                waitSecondsBeforeDrop = 2; //TODO: Adjust time to wait for alliance partner to move from board
-                parkPose = new Pose2d(8, 30, Math.toRadians(-90));*/
-                break;
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            armout();
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())//read distance from wall to the right
+                                    .forward(distancechange(4, "front"))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);//make adjustment based on distance from wall to the right
+                            drop();
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
+                                    .lineToLinearHeading(new Pose2d(1, 29, Math.toRadians(90)))
+                                    .build();
 
-            case RED_NEAR:
-                drive = new SampleMecanumDrive(hardwareMap);
-                switch(identifiedSpikeMarkLocation){
-                    case LEFT:
-
-                        break;
-                    case MIDDLE:
-
-                        break;
-                    case RIGHT:
-
-                        break;
-                }
-                break;
-
-            case BLUE_FAR:
-                //drive = new SampleMecanumDrive(hardwareMap);
-                switch(identifiedSpikeMarkLocation){
-                    case LEFT:
-
-                        break;
-                    case MIDDLE:
-                        traj1 = drive.trajectorySequenceBuilder(new Pose2d())
-                                .lineTo(new Vector2d(30, -4))
+                            drive.followTrajectorySequence(traj7);//drive to stack
+                            safeWaitSeconds(20);
+                             /*
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(28, 74, Math.toRadians(90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .forward(distancechange(4,"front"))
+                                    //.strafeRight(distancechange(32, "right"))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                        /*traj6 = drive.trajectorySequenceBuilder(traj3.end())
+                                .strafeLeft(23)
                                 .build();
-                        drive.followTrajectorySequence(traj1);
-                        release();
-                        traj2 = drive.trajectorySequenceBuilder(traj1.end())
-                                .back(6)
-                                .turn(Math.toRadians(-90))
-                                .forward(10)
-                                .build();
-
-                        drive.followTrajectorySequence(traj2);
-
-                        traj5 = drive.trajectorySequenceBuilder(traj2.end())
-                                .strafeRight(sense.distancechange(33, "right"))
-                                .build();
-                        drive.followTrajectorySequence(traj5);
-                        traj7 = drive.trajectorySequenceBuilder(traj5.end())
-                                .forward(sense.distancechange(2, "front"))
-                                .build();
-
-
-                        drive.followTrajectorySequence(traj7);
-
-                        stack1();
-                        safeWaitSeconds(.7);
-                        stack2();
-                        traj3 = drive.trajectorySequenceBuilder(traj7.end())
-                                .forward(sense.distancechange(11, "front"))
-                                .build();
-                        drive.followTrajectorySequence(traj3);
-
-                        in();
-                        traj6 = drive.trajectorySequenceBuilder(traj3.end())
-                                .strafeLeft(12)
-                                .build();
-                        drive.followTrajectorySequence(traj6);
+                        drive.followTrajectorySequence(traj6);/*
                         stopp();
-                        pick();
-
                         traj4 = drive.trajectorySequenceBuilder(traj6.end())
-                                .back (80)
-                                .turn(Math.toRadians(180))
-                                .forward(20)
+                                .back(93)
+                                //.forward(distancechange(10, "back"))
                                 .build();
                         drive.followTrajectorySequence(traj4);
+                        pick();
                         traj8 = drive.trajectorySequenceBuilder(traj4.end())
-                                .forward(sense.distancechange(28, "front"))
-                                .strafeLeft(22)
+                                .lineToLinearHeading(new Pose2d(30, 82, Math.toRadians(90)))
+                                //.strafeRight(distancechange(32, "right"))
                                 .build();
                         drive.followTrajectorySequence(traj8);
                         armout();
                         traj9 = drive.trajectorySequenceBuilder(traj8.end())
-                                .forward(sense.distancechange(8, "front"))
+                                .strafeLeft(distancechange(33, "left"))
+                                .forward(distancechange(4 , "front"))
                                 .build();
                         drive.followTrajectorySequence(traj9);
-                        grabby.setPosition(1);
-                        traj10 = drive.trajectorySequenceBuilder(traj9.end())
-                                .forward(sense.distancechange(9, "front"))
-                                .build();
-                        drive.followTrajectorySequence(traj10);
-                        grabby.setPosition(.85);
-                        traj11 = drive.trajectorySequenceBuilder(traj10.end())
-                                .back(1)
-                                .strafeRight(4)
+                        drop();
+                        /*traj11 = drive.trajectorySequenceBuilder(traj10.end())
+                                .back(1.2)
+                                .strafeRight(6)
                                 .build();
                         drive.followTrajectorySequence(traj11);
-                        traj12 = drive.trajectorySequenceBuilder(traj11.end())
-                                .forward(sense.distancechange(8, "front"))
-                                .build();
-                        drive.followTrajectorySequence(traj12);
+
+
+
+                        /*
                         wristy.setPosition(0);
                         grabby.setPosition(1);
                         traj13 = drive.trajectorySequenceBuilder(traj12.end())
-                                .forward(sense.distancechange(9, "front"))
+                                .forward(distancechange(12, "back"))
                                 .back(1)
                                 .strafeRight(10)
                                 .build();
-                        drive.followTrajectorySequence(traj13);
-                        break;
-                    case RIGHT:
+                        drive.followTrajectorySequence(traj13);*/
+                            break;
+                        //----------------------------------------------------------------------------//
+                        ////////////////////////////////////////////////////////////////////////////////
+                        // ---------------------------------------------------------------------------//
+                        case LEFT:
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .lineTo(new Vector2d(20, 11))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineToLinearHeading(new Pose2d(12, 11, Math.toRadians(0)))
+                                    .lineToLinearHeading(new Pose2d(22, 25, Math.toRadians(90)))
+                                    .build();
 
-                        break;
-                }
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            armout();
+                            traj7 = drive.trajectorySequenceBuilder(traj2.end())//check distance to wall in front
+                                    .forward(distancechange(4, "frontl"))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);//drive to stack
+                            drop();
+                            traj7 = drive.trajectorySequenceBuilder(traj7.end())//check distance to wall in front
+                                    .lineToLinearHeading(new Pose2d(1, 29, Math.toRadians(90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);//drive to stack
+                            safeWaitSeconds(20);/*
+
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(52, 74, Math.toRadians(0)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            traj12 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .lineToLinearHeading(new Pose2d(33.7, 74, Math.toRadians(90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj12);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj12.end())
+                                    .forward(distancechange(4,"frontl"))
+                                    //.strafeRight(distancechange(32, "right"))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                            break;
+                    }
+                /*midwayPose1 = new Pose2d(14, 13, Math.toRadians(45));
+                waitSecondsBeforeDrop = 2; //TODO: Adjust time to wait for alliance partner to move from board
+                parkPose = new Pose2d(8, 30, Math.toRadians(-90));*/
+                            break;
+                    }
+
+                case RED_NEAR:
+                    //drive = new SampleMecanumDrive(hardwareMap);
+                    switch (identifiedSpikeMarkLocation) {
+                        case LEFT:
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .splineTo(new Vector2d(28, 4), Math.toRadians(-90))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineToLinearHeading(new Pose2d(27, -12, Math.toRadians(-90)))
+                                    .lineToLinearHeading(new Pose2d(31, -25, Math.toRadians(90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            armout();
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())//read distance from wall to the right
+                                    .forward(distancechange(3.5F,"frontr"))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);//make adjustment based on distance from wall to the right
+                            drop();/*
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
+                                    .lineToLinearHeading(new Pose2d(50, -74, Math.toRadians(-90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);//drive to stack
+
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(21.5, -74, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .forward(distancechange(3.5F,"frontr"))
+                                    //.strafeRight(distancechange(32, "right"))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                            /*in();
+                            traj6 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .strafeLeft(23)
+                                    .build();
+                            drive.followTrajectorySequence(traj6);
+                            stopp();
+                            traj4 = drive.trajectorySequenceBuilder(traj6.end())
+                                    .back(93)
+                                    //.forward(distancechange(10, "back"))
+                                    .build();
+                            drive.followTrajectorySequence(traj4);
+                            pick();
+                            traj8 = drive.trajectorySequenceBuilder(traj4.end())
+                                    .lineToLinearHeading(new Pose2d(26, 82, Math.toRadians(90)))
+                                    //.strafeRight(distancechange(32, "right"))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            armout();
+                            traj9 = drive.trajectorySequenceBuilder(traj8.end())
+                                    .strafeLeft(distancechange(25,"left"))
+                                    .forward(distancechange(4 , "front"))
+                                    .build();
+                            drive.followTrajectorySequence(traj9);
+                            drop();*/
+                            break;
+
+                        //----------------------------------------------------------------------------//
+                        ////////////////////////////////////////////////////////////////////////////////
+                        // ---------------------------------------------------------------------------//
+
+                        case MIDDLE:
+                            // purple drop
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .lineTo(new Vector2d(31, -3))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineTo(new Vector2d(23, -3))
+                                    .lineTo(new Vector2d(23, 15))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())//read distance from wall to the right
+                                    .lineToLinearHeading(new Pose2d(50, 15, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);//make adjustment based on distance from wall to the right
+
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
+                                    .lineToLinearHeading(new Pose2d(50, -74, Math.toRadians(-90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);//drive to stack
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(28, -74, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .forward(distancechange(4,"front"))
+                                    //.strafeRight(distancechange(32, "right"))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                        /*traj6 = drive.trajectorySequenceBuilder(traj3.end())
+                                .strafeLeft(23)
+                                .build();
+                        drive.followTrajectorySequence(traj6);/*
+                        stopp();
+                        traj4 = drive.trajectorySequenceBuilder(traj6.end())
+                                .back(93)
+                                //.forward(distancechange(10, "back"))
+                                .build();
+                        drive.followTrajectorySequence(traj4);
+                        pick();
+                        traj8 = drive.trajectorySequenceBuilder(traj4.end())
+                                .lineToLinearHeading(new Pose2d(30, 82, Math.toRadians(90)))
+                                //.strafeRight(distancechange(32, "right"))
+                                .build();
+                        drive.followTrajectorySequence(traj8);
+                        armout();
+                        traj9 = drive.trajectorySequenceBuilder(traj8.end())
+                                .strafeLeft(distancechange(33, "left"))
+                                .forward(distancechange(4 , "front"))
+                                .build();
+                        drive.followTrajectorySequence(traj9);
+                        drop();
+                        /*traj11 = drive.trajectorySequenceBuilder(traj10.end())
+                                .back(1.2)
+                                .strafeRight(6)
+                                .build();
+                        drive.followTrajectorySequence(traj11);
+
+
+
+                        /*
+                        wristy.setPosition(0);
+                        grabby.setPosition(1);
+                        traj13 = drive.trajectorySequenceBuilder(traj12.end())
+                                .forward(distancechange(12, "back"))
+                                .back(1)
+                                .strafeRight(10)
+                                .build();
+                        drive.followTrajectorySequence(traj13);*/
+                            break;
+                        //----------------------------------------------------------------------------//
+                        ////////////////////////////////////////////////////////////////////////////////
+                        // ---------------------------------------------------------------------------//
+                        case RIGHT:
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .lineTo(new Vector2d(20, 11))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineToLinearHeading(new Pose2d(12, 11, Math.toRadians(0)))
+                                    .lineToLinearHeading(new Pose2d(19, -25, Math.toRadians(-90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            armout();
+                            traj7 = drive.trajectorySequenceBuilder(traj2.end())//check distance to wall in front
+                                    .forward(distancechange(4,"frontl"))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);//drive to stack
+                            drop();/*
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(52, -74, Math.toRadians(0)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            traj12 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .lineToLinearHeading(new Pose2d(33.7, -74, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj12);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj12.end())
+                                    .forward(distancechange(4,"frontl"))
+                                    //.strafeRight(distancechange(32, "right"))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();*/
+                            break;
+                    }
+                    break;
+
+                case BLUE_FAR:
+                    //drive = new SampleMecanumDrive(hardwareMap);
+                    switch (identifiedSpikeMarkLocation) {
+                        case LEFT:
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .splineTo(new Vector2d(27, 4), Math.toRadians(90))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineToLinearHeading(new Pose2d(27, -5, Math.toRadians(90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(new Pose2d(52, -5, Math.toRadians(90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);
+
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())
+                                    .lineToLinearHeading(new Pose2d(52, 74, Math.toRadians(90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);
+                            
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(19, 72, Math.toRadians(90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .lineToLinearHeading(getaprilpose(1,16,71,90))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                            break;
+
+                          //----------------------------------------------------------------------------//
+                         ////////////////////////////////////////////////////////////////////////////////
+                        // ---------------------------------------------------------------------------//
+
+                        case MIDDLE:
+                            // purple drop
+                        traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                .lineTo(new Vector2d(31, -5))
+                                .build();
+                        drive.followTrajectorySequence(traj1);
+                        release();
+                        traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                .lineTo(new Vector2d(23, -5))
+                                .lineTo(new Vector2d(23, -15))
+                                .build();
+
+                        drive.followTrajectorySequence(traj2);
+                        mustaches.setPosition(.28);
+                        traj5 = drive.trajectorySequenceBuilder(traj2.end())
+                                .lineToLinearHeading(new Pose2d(52, -18, Math.toRadians(90)))
+                                .build();
+                        drive.followTrajectorySequence(traj5);
+
+                        traj7 = drive.trajectorySequenceBuilder(traj5.end())
+                                .lineToLinearHeading(new Pose2d(52, 74, Math.toRadians(90)))
+                                .build();
+
+                        drive.followTrajectorySequence(traj7);
+                            
+                        traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                .lineToLinearHeading(new Pose2d(26, 72, Math.toRadians(90)))
+                                .build();
+                        drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .lineToLinearHeading(getaprilpose(2,26,71,90))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+
+                            break;
+                          //----------------------------------------------------------------------------//
+                         ////////////////////////////////////////////////////////////////////////////////
+                        // ---------------------------------------------------------------------------//
+                        case RIGHT:
+
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .lineTo(new Vector2d(20, -12))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineTo(new Vector2d(12, -12))
+                                    .lineTo(new Vector2d(13, 1))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineTo(new Vector2d(46, 1))
+                                    .lineToLinearHeading(new Pose2d(52, 1, Math.toRadians(90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);
+
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())
+                                    .lineToLinearHeading(new Pose2d(52, 74, Math.toRadians(90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);
+
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(32, 72, Math.toRadians(90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .lineToLinearHeading(getaprilpose(3,32,71,90))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                            break;
+                    }
                 /*midwayPose1a = new Pose2d(30, -18, Math.toRadians(90));
                 intakeStack = new Pose2d(52, -19,Math.toRadians(90));
                 midwayPose2 = new Pose2d(47, -23, Math.toRadians(0));
                 midwayPose3 = new Pose2d(48, 0, Math.toRadians(90));
                 waitSecondsBeforeDrop = 2; //TODO: Adjust time to wait for alliane partner to move from board*/
-                break;
+                    break;
 
-            case RED_FAR:
-                drive = new SampleMecanumDrive(hardwareMap);
-                switch(identifiedSpikeMarkLocation){
-                    case RIGHT:
+                case RED_FAR:
+                    //drive = new SampleMecanumDrive(hardwareMap);
+                    switch (identifiedSpikeMarkLocation) {
+                        case RIGHT:
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .splineTo(new Vector2d(27, -4), Math.toRadians(-90))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineToLinearHeading(new Pose2d(27, 5, Math.toRadians(-90)))
+                                    .build();
 
-                        break;
-                    case MIDDLE:
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(new Pose2d(52, 5, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);
 
-                        break;
-                    case LEFT:
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())
+                                    .lineToLinearHeading(new Pose2d(52, -74, Math.toRadians(-90)))
+                                    .build();
 
-                        break;
-                }
-                break;
+                            drive.followTrajectorySequence(traj7);
+
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(26, -72, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .lineToLinearHeading(getaprilpose(6,16,-71,-90))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                            break;
+
+                        //----------------------------------------------------------------------------//
+                        ////////////////////////////////////////////////////////////////////////////////
+                        // ---------------------------------------------------------------------------//
+
+                        case MIDDLE:
+                            // purple drop
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .lineTo(new Vector2d(31, 5))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineTo(new Vector2d(23, 5))
+                                    .lineTo(new Vector2d(23, 18))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(new Pose2d(52, 20, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);
+
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())
+                                    .lineToLinearHeading(new Pose2d(52, -74, Math.toRadians(-90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);
+
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(33, -72, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .lineToLinearHeading(getaprilpose(5,26,-71,-90))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                            break;
+                        //----------------------------------------------------------------------------//
+                        ////////////////////////////////////////////////////////////////////////////////
+                        // ---------------------------------------------------------------------------//
+                        case LEFT:
+                            traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+                                    .lineTo(new Vector2d(20, 12))
+                                    .build();
+                            drive.followTrajectorySequence(traj1);
+                            release();
+                            traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                                    .lineTo(new Vector2d(12, 12))
+                                    .lineTo(new Vector2d(13, -1))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj2);
+                            mustaches.setPosition(.28);
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineTo(new Vector2d(50, -1))
+                                    .lineToLinearHeading(new Pose2d(52, -1, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj5);
+
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())
+                                    .lineToLinearHeading(new Pose2d(52, -74, Math.toRadians(-90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);
+
+                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
+                                    .lineToLinearHeading(new Pose2d(32, -72, Math.toRadians(-90)))
+                                    .build();
+                            drive.followTrajectorySequence(traj3);
+                            armout();
+                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
+                                    .lineToLinearHeading(getaprilpose(4,32,-71,-90))
+                                    .build();
+                            drive.followTrajectorySequence(traj8);
+                            drop();
+                            break;
+                    }
+                    break;
+            }
+            break;
         }
 
 
@@ -500,11 +1140,18 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
 
     /**
      * Initialize the TensorFlow Object Detection processor.
-     */
-    private void initTfod() {
+     */private void initDoubleVision() {
+        // -----------------------------------------------------------------------------------------
+        // AprilTag Configuration
+        // -----------------------------------------------------------------------------------------
 
+        aprilTag = new AprilTagProcessor.Builder()
+                .build();
 
-        // Create the TensorFlow processor by using a builder.
+        // -----------------------------------------------------------------------------------------
+        // TFOD Configuration
+        // -----------------------------------------------------------------------------------------
+
         tfod = new TfodProcessor.Builder()
 
                 .setModelFileName(TFOD_MODEL_FILE)
@@ -512,28 +1159,79 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                 .setModelLabels(LABELS)
 
                 .build();
+        // -----------------------------------------------------------------------------------------
+        // Camera Configuration
+        // -----------------------------------------------------------------------------------------
 
-        // Create the vision portal by using a builder.
-        VisionPortal.Builder builder = new VisionPortal.Builder();
-
-        // Set the camera (webcam vs. built-in RC phone camera).
         if (USE_WEBCAM) {
-            builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
+            myVisionPortal = new VisionPortal.Builder()
+                    .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+                    .addProcessors(tfod, aprilTag)
+                    .build();
         } else {
-            builder.setCamera(BuiltinCameraDirection.BACK);
+            myVisionPortal = new VisionPortal.Builder()
+                    .setCamera(BuiltinCameraDirection.BACK)
+                    .addProcessors(tfod, aprilTag)
+                    .build();
         }
+    }   // end initDoubleVision()
 
-        // Set and enable the processor.
-        builder.addProcessor(tfod);
+    /**
+     * Add telemetry about AprilTag detections.
+     */
+    private void telemetryAprilTag() {
+        List<AprilTagDetection> currentDetections = aprilTag.getDetections();
+        telemetry.addData("# AprilTags Detected", currentDetections.size());
 
-        // Build the Vision Portal, using the above settings.
-        visionPortal = builder.build();
+        // Step through the list of detections and display info for each one.
+        for (AprilTagDetection detection : currentDetections) {
+            if (detection.metadata != null) {
+                telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
+                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
+                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
+                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
+            } else {
+                telemetry.addLine(String.format("", detection.id));
+                telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
+            }
+        }   // end for() loop
 
-        // Set confidence threshold for TFOD recognitions, at any time.
-        tfod.setMinResultConfidence(0.8f);
+    }   // end method telemetryAprilTag()
 
-    }    // end method initTfod()
+    /**
+     * Add telemetry about TensorFlow Object Detection (TFOD) recognitions.
+     */
+    private void telemetryTfod() {
+        List<Recognition> currentRecognitions = tfod.getRecognitions();
+        telemetry.addData("# Objects Detected", currentRecognitions.size());
 
+        // Step through the list of recognitions and display info for each one.
+        for (Recognition recognition : currentRecognitions) {
+            double x = (recognition.getLeft() + recognition.getRight()) / 2;
+            double y = (recognition.getTop() + recognition.getBottom()) / 2;
+
+            telemetry.addData("", " ");
+            telemetry.addData("Image", "%s (%.0f %% Conf.)", recognition.getLabel(), recognition.getConfidence() * 100);
+            telemetry.addData("- Position", "%.0f / %.0f", x, y);
+            telemetry.addData("- Size", "%.0f x %.0f", recognition.getWidth(), recognition.getHeight());
+        }   // end for() loop
+
+    }   // end method telemetryTfod()
+
+    private void setCamMode() {
+        if (use_apriltag == 1) {
+            myVisionPortal.setProcessorEnabled(aprilTag, true);
+        } else {
+            myVisionPortal.setProcessorEnabled(aprilTag, false);
+        }
+        if (use_tfod == 1) {
+            myVisionPortal.setProcessorEnabled(tfod, true);
+        } else {
+            myVisionPortal.setProcessorEnabled(tfod, false);
+        }
+    }   // end method doCameraSwitching()
+
+    // end class
     private void runTfodTensorFlow() {
 
         List<Recognition> currentRecognitions = tfod.getRecognitions();
@@ -543,7 +1241,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         if (startPosition == FTCOpenSourceAutonomous.START_POSITION.RED_FAR || startPosition == FTCOpenSourceAutonomous.START_POSITION.BLUE_NEAR) {
             identifiedSpikeMarkLocation = FTCOpenSourceAutonomous.IDENTIFIED_SPIKE_MARK_LOCATION.LEFT;
         } else { //RED_NEAR or BLUE_FAR
-            identifiedSpikeMarkLocation = FTCOpenSourceAutonomous .IDENTIFIED_SPIKE_MARK_LOCATION.LEFT;
+            identifiedSpikeMarkLocation = FTCOpenSourceAutonomous.IDENTIFIED_SPIKE_MARK_LOCATION.LEFT;
         }
         // Step through the list of recognitions and display info for each one.
         for (Recognition recognition : currentRecognitions) {
@@ -565,6 +1263,5 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
 
         }// end for() loop
 
-    }   // end method runTfodTensorFlow()
-
+    }
 }   // end class

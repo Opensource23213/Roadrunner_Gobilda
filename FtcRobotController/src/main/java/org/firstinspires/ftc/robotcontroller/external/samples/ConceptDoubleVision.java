@@ -50,7 +50,6 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list.
  */
 @TeleOp(name = "Concept: Double Vision", group = "Concept")
-@Disabled
 public class ConceptDoubleVision extends LinearOpMode {
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
@@ -68,52 +67,42 @@ public class ConceptDoubleVision extends LinearOpMode {
      * The variable to store our instance of the vision portal.
      */
     private VisionPortal myVisionPortal;
+    private static final String TFOD_MODEL_FILE = "myCustomModel.tflite";
+    // Define the labels recognized in the model for TFOD (must be in training order!)
+    private static final String[] LABELS = {
+            "Blue Prop", "Red Prop"
+    };
+    int use_tfod = 1;
+    int use_apriltag = 2;
 
     @Override
     public void runOpMode() {
         initDoubleVision();
+        //setCamMode();
+        sleep(20);
+
 
         // This OpMode loops continuously, allowing the user to switch between
         // AprilTag and TensorFlow Object Detection (TFOD) image processors.
-        while (!isStopRequested())  {
+        while (!isStopRequested()) {
 
             if (opModeInInit()) {
-                telemetry.addData("DS preview on/off","3 dots, Camera Stream");
+                telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
                 telemetry.addLine();
                 telemetry.addLine("----------------------------------------");
             }
 
             if (myVisionPortal.getProcessorEnabled(aprilTag)) {
-                // User instructions: Dpad left or Dpad right.
-                telemetry.addLine("Dpad Left to disable AprilTag");
-                telemetry.addLine();
                 telemetryAprilTag();
-            } else {
-                telemetry.addLine("Dpad Right to enable AprilTag");
             }
             telemetry.addLine();
             telemetry.addLine("----------------------------------------");
             if (myVisionPortal.getProcessorEnabled(tfod)) {
-                telemetry.addLine("Dpad Down to disable TFOD");
-                telemetry.addLine();
                 telemetryTfod();
-            } else {
-                telemetry.addLine("Dpad Up to enable TFOD");
             }
 
             // Push telemetry to the Driver Station.
             telemetry.update();
-
-            if (gamepad1.dpad_left) {
-                myVisionPortal.setProcessorEnabled(aprilTag, false);
-            } else if (gamepad1.dpad_right) {
-                myVisionPortal.setProcessorEnabled(aprilTag, true);
-            }
-            if (gamepad1.dpad_down) {
-                myVisionPortal.setProcessorEnabled(tfod, false);
-            } else if (gamepad1.dpad_up) {
-                myVisionPortal.setProcessorEnabled(tfod, true);
-            }
 
             sleep(20);
 
@@ -131,29 +120,33 @@ public class ConceptDoubleVision extends LinearOpMode {
         // -----------------------------------------------------------------------------------------
 
         aprilTag = new AprilTagProcessor.Builder()
-            .build();
+                .build();
 
         // -----------------------------------------------------------------------------------------
         // TFOD Configuration
         // -----------------------------------------------------------------------------------------
 
         tfod = new TfodProcessor.Builder()
-            .build();
 
+                .setModelFileName(TFOD_MODEL_FILE)
+
+                .setModelLabels(LABELS)
+
+                .build();
         // -----------------------------------------------------------------------------------------
         // Camera Configuration
         // -----------------------------------------------------------------------------------------
 
         if (USE_WEBCAM) {
             myVisionPortal = new VisionPortal.Builder()
-                .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
-                .addProcessors(tfod, aprilTag)
-                .build();
+                    .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+                    .addProcessors(tfod, aprilTag)
+                    .build();
         } else {
             myVisionPortal = new VisionPortal.Builder()
-                .setCamera(BuiltinCameraDirection.BACK)
-                .addProcessors(tfod, aprilTag)
-                .build();
+                    .setCamera(BuiltinCameraDirection.BACK)
+                    .addProcessors(tfod, aprilTag)
+                    .build();
         }
     }   // end initDoubleVision()
 
@@ -188,10 +181,10 @@ public class ConceptDoubleVision extends LinearOpMode {
 
         // Step through the list of recognitions and display info for each one.
         for (Recognition recognition : currentRecognitions) {
-            double x = (recognition.getLeft() + recognition.getRight()) / 2 ;
-            double y = (recognition.getTop()  + recognition.getBottom()) / 2 ;
+            double x = (recognition.getLeft() + recognition.getRight()) / 2;
+            double y = (recognition.getTop() + recognition.getBottom()) / 2;
 
-            telemetry.addData(""," ");
+            telemetry.addData("", " ");
             telemetry.addData("Image", "%s (%.0f %% Conf.)", recognition.getLabel(), recognition.getConfidence() * 100);
             telemetry.addData("- Position", "%.0f / %.0f", x, y);
             telemetry.addData("- Size", "%.0f x %.0f", recognition.getWidth(), recognition.getHeight());
@@ -199,4 +192,17 @@ public class ConceptDoubleVision extends LinearOpMode {
 
     }   // end method telemetryTfod()
 
-}   // end class
+    private void setCamMode() {
+        if (use_apriltag == 1) {
+            myVisionPortal.setProcessorEnabled(aprilTag, true);
+        } else {
+            myVisionPortal.setProcessorEnabled(aprilTag, false);
+        }
+        if (use_tfod == 1) {
+            myVisionPortal.setProcessorEnabled(tfod, true);
+        } else {
+            myVisionPortal.setProcessorEnabled(tfod, false);
+        }
+    }   // end method doCameraSwitching()
+
+} // end class

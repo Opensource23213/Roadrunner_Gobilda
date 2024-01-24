@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import static com.qualcomm.robotcore.util.ElapsedTime.Resolution.SECONDS;
 import static java.lang.Math.abs;
 
 import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
@@ -180,7 +181,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
         double shoulderTyney = 89;
         double aPress2 = 2;
         double flippydoo = .5;
-        double pickflip = .13 ;
+        double pickflip = .2 ;
         shooty.setPosition(.5);
         double armAngle = 0;
         double shootcount = 0;
@@ -189,6 +190,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
         double xopen = 0;
         double ymove = 1;
         double count = 1;
+        ElapsedTime timer = new ElapsedTime(SECONDS);
         sensors sense = new sensors(hardwareMap);
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
@@ -341,7 +343,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
 
 
             if(grabOpen == 2) {
-                dis2 = dis + .4;
+                dis2 = dis + .35;
                 grabOpen = 3;
             }
 
@@ -453,10 +455,10 @@ public class TyneyCompetitionCode extends LinearOpMode {
             if (gamepad2.x) {
                 if (gamepad2.left_trigger > .4) {  //Pick Pixels
                     xpress = 2;
-                    flippydoo = .5;
-                    flippy.setPosition(flippydoo);
                     grabby.setPosition(grabIn);
-                    wristy.setPosition(wristIn + .3);
+                    wristy.setPosition((float) ((float) .67));
+                    flippydoo = .23;
+                    flippy.setPosition(.23);
 
                 } else {  //Gripper open and close
                     grabby.setPosition(grabIn);
@@ -500,14 +502,13 @@ public class TyneyCompetitionCode extends LinearOpMode {
                 ymove = 1;
                 xopen = 0;
                 grabby.setPosition(grabIn);
-                if (gamepad2.left_trigger > .4) {
+                serPosition = .91;
+                wristy.setPosition((float) ((float) .67));
+                grabby.setPosition(1);
+                position = -10;
 
-                } else {
-                    serPosition = .91;
-                    wristy.setPosition(wristIn);
-                    position = 0;
-                    bpress = 2;
-                }
+                bpress = 2;
+
             }
             if (gamepad2.y) {
                 // Play
@@ -516,35 +517,25 @@ public class TyneyCompetitionCode extends LinearOpMode {
                 ypress = 2;
             }
             // pick pixels
-            if (xpress == 2 && counter3 < 2) {
-                counter3 += 1;
-            } else if (xpress == 2 && counter3 >= 2) {
-                flippydoo = pickflip;
-                flippy.setPosition(flippydoo);
+            else if (xpress == 2) {
+                flippy.setPosition(.20);
+                timer.reset();
                 xpress = 3;
                 counter3 = 0;
-            } else if (xpress == 3 && counter3 < 12) {
-                counter3 += 1;
-            } else if (xpress == 3 && counter3 >= 12) {
+            } else if (xpress == 3 && timer.time() > .25) {
                 serPosition = 1;
                 xpress = 4;
                 counter3 = 0;
-            } else if (xpress == 4 && counter3 < 4) {
-                counter3 += 1;
-            } else if (xpress == 4 && counter3 >= 4) {
+            } else if (xpress == 4 && timer.time() > .55) {
                 grabby.setPosition(grabOut);
                 xpress = 5;
                 counter3 = 0;
-            } else if (xpress == 5 && counter3 < 7) {
-                counter3 += 1;
-            } else if (xpress == 5 && counter3 >= 7) {
+            } else if (xpress == 5 && timer.time() > .75) {
                 flippydoo = .5;
                 flippy.setPosition(flippydoo);
                 xpress = 6;
                 counter3 = 0;
-            }else if (xpress == 6 && counter3 < 12) {
-                counter3 += 1;
-            } else if (xpress == 6 && counter3 >= 12) {
+            } else if (xpress == 6 && timer.time()>.85) {
                 serPosition = .91;
                 xpress = 1;
                 counter3 = 0;
@@ -573,7 +564,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
             }
             if (ypress != 3 && xpress >= 2) {
                 // serPosition = (elbowTyney + shoulderTyney * 13 - armAngle * 13) / 355;  //elbow
-                wristy.setPosition(.62);  //wrist
+                wristy.setPosition((float) ((float) .67));
             }
             // b movement
             if (bpress == 2 && counter < 15) {
@@ -601,7 +592,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
                             apress = 3;
                         }
 
-                    } else if (position > armAngle + 8 || position < armAngle - 8) {//  Far and fast arm move into position within an infinite range
+                    } else if (position > armAngle + 11 || position < armAngle - 11) {//  Far and fast arm move into position within an infinite range
                         if (position < armAngle) {
                             Arm1.setPower(1);
                             Arm2.setPower(1);
@@ -619,6 +610,12 @@ public class TyneyCompetitionCode extends LinearOpMode {
                         if (position < armAngle) {
                             Arm1.setPower(.2);
                             Arm2.setPower(.2);
+                        }
+                        if (armAngle < 10){
+                            if (position > armAngle) {
+                                Arm1.setPower(-.1);
+                                Arm2.setPower(-.1);
+                            }
                         }
                         if (position > armAngle) {
                             Arm1.setPower(-.2);
