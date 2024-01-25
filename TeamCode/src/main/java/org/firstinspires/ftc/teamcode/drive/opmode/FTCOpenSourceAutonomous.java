@@ -283,10 +283,10 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         while (grab == 1){
             if (dis2 > dis) {
                 dis = (sensorDistance.getDistance(DistanceUnit.INCH) + sensorDistance2.getDistance(DistanceUnit.INCH))/2;
-                front_left.setPower(-.2);
-                front_right.setPower(-.2);
-                rear_left.setPower(-.2);
-                rear_right.setPower(-.2);
+                front_left.setPower(-.3);
+                front_right.setPower(-.3);
+                rear_left.setPower(-.3);
+                rear_right.setPower(-.3);
             } else{
                 front_left.setPower(0);
                 front_right.setPower(0);
@@ -295,7 +295,6 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                 grab = 2;
             }
         }
-        safeWaitSeconds(1);
         /*grabby.setPosition(.75);
         armpose(0);
         dis2 = dis - .6;
@@ -318,7 +317,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         wristy.setPosition(0);
         safeWaitSeconds(.5);*/
         b();
-        safeWaitSeconds(2);
+        //safeWaitSeconds(2);
     }
 
     public void armout(){
@@ -442,70 +441,28 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                     switch (identifiedSpikeMarkLocation) {
                         case RIGHT:
                             traj1 = drive.trajectorySequenceBuilder(new Pose2d())
-                                    .splineTo(new Vector2d(28, -4), Math.toRadians(90))
+                                    .splineTo(new Vector2d(27, -4), Math.toRadians(-90))
                                     .build();
                             drive.followTrajectorySequence(traj1);
                             release();
                             traj2 = drive.trajectorySequenceBuilder(traj1.end())
-                                    .lineToLinearHeading(new Pose2d(28, 5, Math.toRadians(90)))
-                                    .lineToLinearHeading(new Pose2d(31, 25, Math.toRadians(-90)))
+                                    .lineToLinearHeading(new Pose2d(27, 5, Math.toRadians(-90)))
+                                    .lineToLinearHeading(new Pose2d(23, 10, Math.toRadians(90)))
                                     .build();
 
                             drive.followTrajectorySequence(traj2);
                             mustaches.setPosition(.28);
                             armout();
-                            traj5 = drive.trajectorySequenceBuilder(traj2.end())//read distance from wall to the right
-                                    .forward(distancechange(4, "frontl"))
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(getaprilpose(3, 30,9,90))
                                     .build();
-                            drive.followTrajectorySequence(traj5);//make adjustment based on distance from wall to the right
+                            drive.followTrajectorySequence(traj5);
                             drop();
-                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
-                                    .lineToLinearHeading(new Pose2d(1, 29, Math.toRadians(90)))
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())
+                                    .lineToLinearHeading(new Pose2d(1, 37, Math.toRadians(90)))
                                     .build();
 
-                            drive.followTrajectorySequence(traj7);//drive to stack
-                            safeWaitSeconds(20);/*
-                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
-                                    .lineToLinearHeading(new Pose2d(50, 74, Math.toRadians(90)))
-                                    .build();
-
-                            drive.followTrajectorySequence(traj7);//drive to stack
-
-                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
-                                    .lineToLinearHeading(new Pose2d(21.5, 74, Math.toRadians(90)))
-                                    .build();
-                            drive.followTrajectorySequence(traj3);
-                            armout();
-                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .forward(distancechange(4,"frontr"))
-                                    //.strafeRight(distancechange(32, "right"))
-                                    .build();
-                            drive.followTrajectorySequence(traj8);
-                            drop();
-                            /*in();
-                            traj6 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .strafeLeft(23)
-                                    .build();
-                            drive.followTrajectorySequence(traj6);
-                            stopp();
-                            traj4 = drive.trajectorySequenceBuilder(traj6.end())
-                                    .back(93)
-                                    //.forward(distancechange(10, "back"))
-                                    .build();
-                            drive.followTrajectorySequence(traj4);
-                            pick();
-                            traj8 = drive.trajectorySequenceBuilder(traj4.end())
-                                    .lineToLinearHeading(new Pose2d(26, 82, Math.toRadians(90)))
-                                    //.strafeRight(distancechange(32, "right"))
-                                    .build();
-                            drive.followTrajectorySequence(traj8);
-                            armout();
-                            traj9 = drive.trajectorySequenceBuilder(traj8.end())
-                                    .strafeLeft(distancechange(25,"left"))
-                                    .forward(distancechange(4 , "front"))
-                                    .build();
-                            drive.followTrajectorySequence(traj9);
-                            drop();*/
+                            drive.followTrajectorySequence(traj7);
                             break;
 
                         //----------------------------------------------------------------------------//
@@ -513,83 +470,30 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                         // ---------------------------------------------------------------------------//
 
                         case MIDDLE:
-                            // purple drop
                             traj1 = drive.trajectorySequenceBuilder(new Pose2d())
                                     .lineTo(new Vector2d(31, 5))
                                     .build();
                             drive.followTrajectorySequence(traj1);
                             release();
                             traj2 = drive.trajectorySequenceBuilder(traj1.end())
-                                    .lineTo(new Vector2d(23, 5))
-                                    .lineToLinearHeading(new Pose2d(26, 25, Math.toRadians(90)))
+                                    .lineToLinearHeading(new Pose2d(23, 5, Math.toRadians(0)))
+                                    .lineToLinearHeading(new Pose2d(23, 17, Math.toRadians(90)))
                                     .build();
 
                             drive.followTrajectorySequence(traj2);
                             mustaches.setPosition(.28);
                             armout();
-                            traj5 = drive.trajectorySequenceBuilder(traj2.end())//read distance from wall to the right
-                                    .forward(distancechange(4, "front"))
-                                    .build();
-                            drive.followTrajectorySequence(traj5);//make adjustment based on distance from wall to the right
-                            drop();
-                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
-                                    .lineToLinearHeading(new Pose2d(1, 29, Math.toRadians(90)))
-                                    .build();
-
-                            drive.followTrajectorySequence(traj7);//drive to stack
-                            safeWaitSeconds(20);
-                             /*
-                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
-                                    .lineToLinearHeading(new Pose2d(28, 74, Math.toRadians(90)))
-                                    .build();
-                            drive.followTrajectorySequence(traj3);
-                            armout();
-                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .forward(distancechange(4,"front"))
-                                    //.strafeRight(distancechange(32, "right"))
+                            traj8 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(getaprilpose(2, 23,15,90))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
-                        /*traj6 = drive.trajectorySequenceBuilder(traj3.end())
-                                .strafeLeft(23)
-                                .build();
-                        drive.followTrajectorySequence(traj6);/*
-                        stopp();
-                        traj4 = drive.trajectorySequenceBuilder(traj6.end())
-                                .back(93)
-                                //.forward(distancechange(10, "back"))
-                                .build();
-                        drive.followTrajectorySequence(traj4);
-                        pick();
-                        traj8 = drive.trajectorySequenceBuilder(traj4.end())
-                                .lineToLinearHeading(new Pose2d(30, 82, Math.toRadians(90)))
-                                //.strafeRight(distancechange(32, "right"))
-                                .build();
-                        drive.followTrajectorySequence(traj8);
-                        armout();
-                        traj9 = drive.trajectorySequenceBuilder(traj8.end())
-                                .strafeLeft(distancechange(33, "left"))
-                                .forward(distancechange(4 , "front"))
-                                .build();
-                        drive.followTrajectorySequence(traj9);
-                        drop();
-                        /*traj11 = drive.trajectorySequenceBuilder(traj10.end())
-                                .back(1.2)
-                                .strafeRight(6)
-                                .build();
-                        drive.followTrajectorySequence(traj11);
+                            traj7 = drive.trajectorySequenceBuilder(traj8.end())
+                                    .lineToLinearHeading(new Pose2d(1, 39, Math.toRadians(90)))
+                                    .build();
 
+                            drive.followTrajectorySequence(traj7);
 
-
-                        /*
-                        wristy.setPosition(0);
-                        grabby.setPosition(1);
-                        traj13 = drive.trajectorySequenceBuilder(traj12.end())
-                                .forward(distancechange(12, "back"))
-                                .back(1)
-                                .strafeRight(10)
-                                .build();
-                        drive.followTrajectorySequence(traj13);*/
                             break;
                         //----------------------------------------------------------------------------//
                         ////////////////////////////////////////////////////////////////////////////////
@@ -602,111 +506,61 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                             release();
                             traj2 = drive.trajectorySequenceBuilder(traj1.end())
                                     .lineToLinearHeading(new Pose2d(12, 11, Math.toRadians(0)))
-                                    .lineToLinearHeading(new Pose2d(22, 25, Math.toRadians(90)))
+                                    .lineToLinearHeading(new Pose2d(15, 25, Math.toRadians(90)))
                                     .build();
 
                             drive.followTrajectorySequence(traj2);
                             mustaches.setPosition(.28);
                             armout();
-                            traj7 = drive.trajectorySequenceBuilder(traj2.end())//check distance to wall in front
-                                    .forward(distancechange(4, "frontl"))
-                                    .build();
-
-                            drive.followTrajectorySequence(traj7);//drive to stack
-                            drop();
-                            traj7 = drive.trajectorySequenceBuilder(traj7.end())//check distance to wall in front
-                                    .lineToLinearHeading(new Pose2d(1, 29, Math.toRadians(90)))
-                                    .build();
-
-                            drive.followTrajectorySequence(traj7);//drive to stack
-                            safeWaitSeconds(20);/*
-
-                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
-                                    .lineToLinearHeading(new Pose2d(52, 74, Math.toRadians(0)))
-                                    .build();
-                            drive.followTrajectorySequence(traj3);
-                            traj12 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .lineToLinearHeading(new Pose2d(33.7, 74, Math.toRadians(90)))
-                                    .build();
-                            drive.followTrajectorySequence(traj12);
-                            armout();
-                            traj8 = drive.trajectorySequenceBuilder(traj12.end())
-                                    .forward(distancechange(4,"frontl"))
-                                    //.strafeRight(distancechange(32, "right"))
+                            traj8 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(getaprilpose(1, 15,24,90))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
+                            traj7 = drive.trajectorySequenceBuilder(traj8.end())
+                                    .lineToLinearHeading(new Pose2d(1, 39, Math.toRadians(90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);
+
+                            /*traj7 = drive.trajectorySequenceBuilder(traj2.end())//check distance to wall in front
+                                    .forward(distancechange(4, "frontl"))
+                                    .build();*/
+
+
                             break;
                     }
-                /*midwayPose1 = new Pose2d(14, 13, Math.toRadians(45));
-                waitSecondsBeforeDrop = 2; //TODO: Adjust time to wait for alliance partner to move from board
-                parkPose = new Pose2d(8, 30, Math.toRadians(-90));*/
-                            break;
-                    }
+
+                //waitSecondsBeforeDrop = 2; //TODO: Adjust time to wait for alliance partner to move from board
+                    break;
 
                 case RED_NEAR:
                     //drive = new SampleMecanumDrive(hardwareMap);
                     switch (identifiedSpikeMarkLocation) {
                         case LEFT:
                             traj1 = drive.trajectorySequenceBuilder(new Pose2d())
-                                    .splineTo(new Vector2d(28, 4), Math.toRadians(-90))
+                                    .splineTo(new Vector2d(27, 4), Math.toRadians(90))
                                     .build();
                             drive.followTrajectorySequence(traj1);
                             release();
                             traj2 = drive.trajectorySequenceBuilder(traj1.end())
-                                    .lineToLinearHeading(new Pose2d(27, -12, Math.toRadians(-90)))
-                                    .lineToLinearHeading(new Pose2d(31, -25, Math.toRadians(90)))
+                                    .lineToLinearHeading(new Pose2d(27, -5, Math.toRadians(90)))
+                                    .lineToLinearHeading(new Pose2d(40, -25, Math.toRadians(-90)))
                                     .build();
 
                             drive.followTrajectorySequence(traj2);
                             mustaches.setPosition(.28);
                             armout();
-                            traj5 = drive.trajectorySequenceBuilder(traj2.end())//read distance from wall to the right
-                                    .forward(distancechange(3.5F,"frontr"))
+                            traj5 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(getaprilpose(4, 30,-25,-90))
                                     .build();
-                            drive.followTrajectorySequence(traj5);//make adjustment based on distance from wall to the right
-                            drop();/*
-                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
-                                    .lineToLinearHeading(new Pose2d(50, -74, Math.toRadians(-90)))
-                                    .build();
-
-                            drive.followTrajectorySequence(traj7);//drive to stack
-
-                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
-                                    .lineToLinearHeading(new Pose2d(21.5, -74, Math.toRadians(-90)))
-                                    .build();
-                            drive.followTrajectorySequence(traj3);
-                            armout();
-                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .forward(distancechange(3.5F,"frontr"))
-                                    //.strafeRight(distancechange(32, "right"))
-                                    .build();
-                            drive.followTrajectorySequence(traj8);
+                            drive.followTrajectorySequence(traj5);
                             drop();
-                            /*in();
-                            traj6 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .strafeLeft(23)
+                            traj7 = drive.trajectorySequenceBuilder(traj5.end())
+                                    .lineToLinearHeading(new Pose2d(1, -37, Math.toRadians(-90)))
                                     .build();
-                            drive.followTrajectorySequence(traj6);
-                            stopp();
-                            traj4 = drive.trajectorySequenceBuilder(traj6.end())
-                                    .back(93)
-                                    //.forward(distancechange(10, "back"))
-                                    .build();
-                            drive.followTrajectorySequence(traj4);
-                            pick();
-                            traj8 = drive.trajectorySequenceBuilder(traj4.end())
-                                    .lineToLinearHeading(new Pose2d(26, 82, Math.toRadians(90)))
-                                    //.strafeRight(distancechange(32, "right"))
-                                    .build();
-                            drive.followTrajectorySequence(traj8);
-                            armout();
-                            traj9 = drive.trajectorySequenceBuilder(traj8.end())
-                                    .strafeLeft(distancechange(25,"left"))
-                                    .forward(distancechange(4 , "front"))
-                                    .build();
-                            drive.followTrajectorySequence(traj9);
-                            drop();*/
+
+                            drive.followTrajectorySequence(traj7);
                             break;
 
                         //----------------------------------------------------------------------------//
@@ -716,117 +570,58 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                         case MIDDLE:
                             // purple drop
                             traj1 = drive.trajectorySequenceBuilder(new Pose2d())
-                                    .lineTo(new Vector2d(31, -3))
+                                    .lineTo(new Vector2d(31, -5))
                                     .build();
                             drive.followTrajectorySequence(traj1);
                             release();
                             traj2 = drive.trajectorySequenceBuilder(traj1.end())
-                                    .lineTo(new Vector2d(23, -3))
-                                    .lineTo(new Vector2d(23, 15))
+                                    .lineToLinearHeading(new Pose2d(23, -5, Math.toRadians(0)))
+                                    .lineToLinearHeading(new Pose2d(23, -17, Math.toRadians(-90)))
                                     .build();
 
                             drive.followTrajectorySequence(traj2);
                             mustaches.setPosition(.28);
-                            traj5 = drive.trajectorySequenceBuilder(traj2.end())//read distance from wall to the right
-                                    .lineToLinearHeading(new Pose2d(50, 15, Math.toRadians(-90)))
-                                    .build();
-                            drive.followTrajectorySequence(traj5);//make adjustment based on distance from wall to the right
-
-                            traj7 = drive.trajectorySequenceBuilder(traj5.end())//check distance to wall in front
-                                    .lineToLinearHeading(new Pose2d(50, -74, Math.toRadians(-90)))
-                                    .build();
-
-                            drive.followTrajectorySequence(traj7);//drive to stack
-                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
-                                    .lineToLinearHeading(new Pose2d(28, -74, Math.toRadians(-90)))
-                                    .build();
-                            drive.followTrajectorySequence(traj3);
                             armout();
-                            traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .forward(distancechange(4,"front"))
-                                    //.strafeRight(distancechange(32, "right"))
+                            traj8 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(getaprilpose(5, 21,-15,-90))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
-                        /*traj6 = drive.trajectorySequenceBuilder(traj3.end())
-                                .strafeLeft(23)
-                                .build();
-                        drive.followTrajectorySequence(traj6);/*
-                        stopp();
-                        traj4 = drive.trajectorySequenceBuilder(traj6.end())
-                                .back(93)
-                                //.forward(distancechange(10, "back"))
-                                .build();
-                        drive.followTrajectorySequence(traj4);
-                        pick();
-                        traj8 = drive.trajectorySequenceBuilder(traj4.end())
-                                .lineToLinearHeading(new Pose2d(30, 82, Math.toRadians(90)))
-                                //.strafeRight(distancechange(32, "right"))
-                                .build();
-                        drive.followTrajectorySequence(traj8);
-                        armout();
-                        traj9 = drive.trajectorySequenceBuilder(traj8.end())
-                                .strafeLeft(distancechange(33, "left"))
-                                .forward(distancechange(4 , "front"))
-                                .build();
-                        drive.followTrajectorySequence(traj9);
-                        drop();
-                        /*traj11 = drive.trajectorySequenceBuilder(traj10.end())
-                                .back(1.2)
-                                .strafeRight(6)
-                                .build();
-                        drive.followTrajectorySequence(traj11);
+                            traj7 = drive.trajectorySequenceBuilder(traj8.end())
+                                    .lineToLinearHeading(new Pose2d(1, -39, Math.toRadians(-90)))
+                                    .build();
 
+                            drive.followTrajectorySequence(traj7);
 
-
-                        /*
-                        wristy.setPosition(0);
-                        grabby.setPosition(1);
-                        traj13 = drive.trajectorySequenceBuilder(traj12.end())
-                                .forward(distancechange(12, "back"))
-                                .back(1)
-                                .strafeRight(10)
-                                .build();
-                        drive.followTrajectorySequence(traj13);*/
                             break;
                         //----------------------------------------------------------------------------//
                         ////////////////////////////////////////////////////////////////////////////////
                         // ---------------------------------------------------------------------------//
                         case RIGHT:
                             traj1 = drive.trajectorySequenceBuilder(new Pose2d())
-                                    .lineTo(new Vector2d(20, 11))
+                                    .lineTo(new Vector2d(20, -11))
                                     .build();
                             drive.followTrajectorySequence(traj1);
                             release();
                             traj2 = drive.trajectorySequenceBuilder(traj1.end())
-                                    .lineToLinearHeading(new Pose2d(12, 11, Math.toRadians(0)))
-                                    .lineToLinearHeading(new Pose2d(19, -25, Math.toRadians(-90)))
+                                    .lineToLinearHeading(new Pose2d(12, -11, Math.toRadians(0)))
+                                    .lineToLinearHeading(new Pose2d(20, -25, Math.toRadians(-90)))
                                     .build();
 
                             drive.followTrajectorySequence(traj2);
                             mustaches.setPosition(.28);
                             armout();
-                            traj7 = drive.trajectorySequenceBuilder(traj2.end())//check distance to wall in front
-                                    .forward(distancechange(4,"frontl"))
-                                    .build();
-
-                            drive.followTrajectorySequence(traj7);//drive to stack
-                            drop();/*
-                            traj3 = drive.trajectorySequenceBuilder(traj7.end())
-                                    .lineToLinearHeading(new Pose2d(52, -74, Math.toRadians(0)))
-                                    .build();
-                            drive.followTrajectorySequence(traj3);
-                            traj12 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .lineToLinearHeading(new Pose2d(33.7, -74, Math.toRadians(-90)))
-                                    .build();
-                            drive.followTrajectorySequence(traj12);
-                            armout();
-                            traj8 = drive.trajectorySequenceBuilder(traj12.end())
-                                    .forward(distancechange(4,"frontl"))
-                                    //.strafeRight(distancechange(32, "right"))
+                            traj8 = drive.trajectorySequenceBuilder(traj2.end())
+                                    .lineToLinearHeading(getaprilpose(6, 13,-24,-90))
                                     .build();
                             drive.followTrajectorySequence(traj8);
-                            drop();*/
+                            drop();
+                            traj7 = drive.trajectorySequenceBuilder(traj8.end())
+                                    .lineToLinearHeading(new Pose2d(1, -39, Math.toRadians(-90)))
+                                    .build();
+
+                            drive.followTrajectorySequence(traj7);
+
                             break;
                     }
                     break;
