@@ -63,6 +63,8 @@ public class TyneyCompetitionCode extends LinearOpMode {
 
     private Servo lifty = null;
     private Servo shooty;
+    private DistanceSensor sensorDistance;
+    private DistanceSensor sensorDistance2;
     @Override
     public void runOpMode() {
 
@@ -91,6 +93,10 @@ public class TyneyCompetitionCode extends LinearOpMode {
         lifty = hardwareMap.get(Servo.class, "lifty");
         mustaches = hardwareMap.get(Servo.class, "mustaches");
         ilifty = hardwareMap.get(Servo.class, "lifty2");
+        sensorDistance = hardwareMap.get(DistanceSensor.class, "sensorDistance");
+        sensorDistance2 = hardwareMap.get(DistanceSensor.class, "sensorDistance2");
+        Rev2mDistanceSensor sensorTimeOfFlight = (Rev2mDistanceSensor) sensorDistance;
+        Rev2mDistanceSensor sensorTimeOfFlight2 = (Rev2mDistanceSensor) sensorDistance2;
         double serAdjust = 3;
 
         //Arm_Encoder = new Encoder(hardwareMap.get(DcMotorEx.class, "parallelEncoder"));
@@ -191,11 +197,10 @@ public class TyneyCompetitionCode extends LinearOpMode {
         double ymove = 1;
         double count = 1;
         ElapsedTime timer = new ElapsedTime(SECONDS);
-        sensors sense = new sensors(hardwareMap);
+
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-
-            double dis = sense.dis("front");
+            double dis = (sensorDistance.getDistance(DistanceUnit.INCH) + sensorDistance2.getDistance(DistanceUnit.INCH))/2;
             // servo position in degrees
             double elbowDegree = elbow1.getPosition() * 355;
             double wristDegree = wristy.getPosition() * 355 + serAdjust;
@@ -206,6 +211,11 @@ public class TyneyCompetitionCode extends LinearOpMode {
             double frontrightPower;
             double rearleftPower;
             double rearrightPower;
+            if(gamepad2.ps){
+                ArmPos.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                armInit = 1;
+                position = 0;
+            }
             if(armInit == 2){
                 armAngle = ArmPos.getCurrentPosition() / ticks - 23;
             }else {
@@ -233,11 +243,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
 
             // Check to see if heading reset is requested
             // Reset Field Centric
-            if(gamepad2.ps){
-                ArmPos.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                armInit = 1;
-                position = 0;
-            }
+
             if (gamepad1.ps) {
                 telemetry.addData("Yaw", "Resetting\n");
                 imu.initialize(new IMU.Parameters(orientationOnRobot));
@@ -252,7 +258,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
                 }else{
                     shooty.setPosition(.75);
                 }
-                lifty.setPosition(.43);
+                lifty.setPosition(.2);
             }else{
                 shooty.setPosition(.5);
                 lifty.setPosition(0);
@@ -642,9 +648,6 @@ public class TyneyCompetitionCode extends LinearOpMode {
             telemetry.addLine("Drive Train Values:");
             telemetry.addLine("");
             telemetry.addData("Forward Distance: ", dis);
-            telemetry.addData("Left Distance: ", sense.dis("left"));
-            telemetry.addData("Right Distance: ", sense.dis("right"));
-            telemetry.addData("Back Distance: ", sense.dis("back"));
             telemetry.addData("Front left/Right: ", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right: ", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.addData("Spinny Speed: ", "%4.2f", leftFrontPower);

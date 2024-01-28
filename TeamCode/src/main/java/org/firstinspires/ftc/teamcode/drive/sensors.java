@@ -20,10 +20,6 @@ public class sensors {
     public sensors(HardwareMap hardwareMap){
 
         sensorDistance = hardwareMap.get(DistanceSensor.class, "sensorDistance");
-        sensorDistance2 = hardwareMap.get(DistanceSensor.class, "sensorDistance2");
-        sensorDistancel = hardwareMap.get(DistanceSensor.class, "dis_left");
-        sensorDistancer = hardwareMap.get(DistanceSensor.class, "dis_right");
-        sensorDistanceb = hardwareMap.get(DistanceSensor.class, "dis_rear");
         Rev2mDistanceSensor sensorTimeOfFlight = (Rev2mDistanceSensor) sensorDistance;
         Rev2mDistanceSensor sensorTimeOfFlight2 = (Rev2mDistanceSensor) sensorDistance2;
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
@@ -31,19 +27,7 @@ public class sensors {
     }
 
     public double dis(String side) {
-        double dis = 1;
-        if (side == "front") {
-            dis = (sensorDistance.getDistance(DistanceUnit.INCH) + sensorDistance2.getDistance(DistanceUnit.INCH)) / 2;
-        }
-        if (side == "right") {
-            dis = sensorDistancer.getDistance(DistanceUnit.INCH);;
-        }
-        if (side == "left") {
-            dis = sensorDistancel.getDistance(DistanceUnit.INCH);;
-        }
-        if (side == "back") {
-            dis = sensorDistanceb.getDistance(DistanceUnit.INCH);;
-        }
+        double dis = sensorDistance.getDistance(DistanceUnit.INCH);
         return dis;
     }
 

@@ -93,6 +93,45 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         RIGHT
     }
     public static IDENTIFIED_SPIKE_MARK_LOCATION identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.LEFT;
+    TrajectorySequence traj1 = drive.trajectorySequenceBuilder(new Pose2d())
+            .forward(1)
+            .build();
+    TrajectorySequence traj2 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj3 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj4 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj5 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj6 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj7 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj8 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj9 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj10 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj11 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj12 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
+    TrajectorySequence traj13 = drive.trajectorySequenceBuilder(new Pose2d())
+            .splineTo(new Vector2d(30, 30), 0)
+            .build();
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -128,6 +167,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         Arm2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         elbow1.setDirection(Servo.Direction.REVERSE);
         ilifty.setPosition(.3);
+        int sleeps = 5;
         selectStartingPosition();
         //Key Pay inputs to selecting Starting Position of robot
         initDoubleVision();
@@ -204,16 +244,18 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         flippy.setPosition(.5);
         elbow1.setPosition(.91);
     }
-    public Pose2d getaprilpose(int id, int x, int y, int angle) {
+    public Pose2d getaprilpose(int id, int x, int y, int angle, int y2, int x2) {
         float xpose = 0;
         float ypose = 0;
+        ElapsedTime slee = new ElapsedTime(SECONDS);
+        slee.reset();
         AprilTagDetection desiredTag = null;
-        while(xpose == 0) {
+        while(xpose == 0 && slee.time() < 4) {
             List<AprilTagDetection> currentDetections = aprilTag.getDetections();
             for (AprilTagDetection detection : currentDetections) {
                 if (detection.metadata != null) {
                     //  Check to see if we want to track towards this tag.
-                    if ((detection.id == id)) {
+                    if ((detection.id == id )) {
                         // Yes, we want to use this tag.
                         desiredTag = detection;
                         telemetry.addData("dis", String.valueOf(desiredTag.ftcPose.y), desiredTag.ftcPose.x);
@@ -234,6 +276,28 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                 }
 
             }
+        }
+        if (xpose == 0){
+            if (id == 1){
+                y2 += (int) distancechange( 1,"frontr");
+            }
+            if (id == 4){
+                y2 -= (int) distancechange( 1,"frontr");
+            }
+            if (id == 5){
+                y2 -= (int) distancechange( 1,"front");
+            }
+            if (id == 6){
+                y2 -= (int) distancechange( 1,"frontl");
+            }
+            if (id == 2){
+                y2 += (int) distancechange( 1,"front");
+            }
+            if (id == 3){
+                y2 += (int) distancechange( 1,"frontl");
+            }
+            y = y2;
+            x = x2;
         }
         return new Pose2d(x, y, Math.toRadians(angle));
     }
@@ -368,50 +432,10 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
             }
         }
     }
+
     public void runAutonoumousMode() {
         //Initialize Pose2d as desired
         //SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);  //Moved with other hardware mapping
-
-        TrajectorySequence traj1 = drive.trajectorySequenceBuilder(new Pose2d())
-                .forward(1)
-                .build();
-        TrajectorySequence traj2 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj3 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj4 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj5 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj6 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj7 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj8 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj9 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj10 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj11 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj12 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-        TrajectorySequence traj13 = drive.trajectorySequenceBuilder(new Pose2d())
-                .splineTo(new Vector2d(30, 30), 0)
-                .build();
-
         double ticks = 22.76;
         double armAngle = ArmPos.getCurrentPosition() / ticks - 25;
         double serAdjust = -7;
@@ -423,17 +447,10 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
         wristy.setPosition(wristIn);
         double grabOut = .79;
         float servoDegree = 1 / 355;
-        telemetry.update();
         armpose(-10);
 
         //Move robot to dropPurplePixel based on identified Spike Mark Location
         while(opModeIsActive()) {
-
-            //For Blue Right and Red Left, intake pixel from stack
-            if (startPosition == FTCOpenSourceAutonomous.START_POSITION.BLUE_FAR ||
-                    startPosition == FTCOpenSourceAutonomous.START_POSITION.RED_FAR) {
-
-            }
 
             switch (startPosition) {
                 case BLUE_NEAR:
@@ -454,7 +471,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                             mustaches.setPosition(.28);
                             armout();
                             traj5 = drive.trajectorySequenceBuilder(traj2.end())
-                                    .lineToLinearHeading(getaprilpose(3, 30,9,90))
+                                    .lineToLinearHeading(getaprilpose(3, 30,9,90, 10, 23))
                                     .build();
                             drive.followTrajectorySequence(traj5);
                             drop();
@@ -484,7 +501,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                             mustaches.setPosition(.28);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj2.end())
-                                    .lineToLinearHeading(getaprilpose(2, 23,15,90))
+                                    .lineToLinearHeading(getaprilpose(2, 23,15,90, 17, 23))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
@@ -513,7 +530,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                             mustaches.setPosition(.28);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj2.end())
-                                    .lineToLinearHeading(getaprilpose(1, 15,24,90))
+                                    .lineToLinearHeading(getaprilpose(1, 15,24,90, 25, 15))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
@@ -552,7 +569,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                             mustaches.setPosition(.28);
                             armout();
                             traj5 = drive.trajectorySequenceBuilder(traj2.end())
-                                    .lineToLinearHeading(getaprilpose(4, 30,-25,-90))
+                                    .lineToLinearHeading(getaprilpose(4, 29,-25,-90, -25, 40))
                                     .build();
                             drive.followTrajectorySequence(traj5);
                             drop();
@@ -583,7 +600,7 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                             mustaches.setPosition(.28);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj2.end())
-                                    .lineToLinearHeading(getaprilpose(5, 21,-15,-90))
+                                    .lineToLinearHeading(getaprilpose(5, 21,-15,-90, -17, 23))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
@@ -605,14 +622,14 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                             release();
                             traj2 = drive.trajectorySequenceBuilder(traj1.end())
                                     .lineToLinearHeading(new Pose2d(12, -11, Math.toRadians(0)))
-                                    .lineToLinearHeading(new Pose2d(20, -25, Math.toRadians(-90)))
+                                    .lineToLinearHeading(new Pose2d(22, -25, Math.toRadians(-90)))
                                     .build();
 
                             drive.followTrajectorySequence(traj2);
                             mustaches.setPosition(.28);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj2.end())
-                                    .lineToLinearHeading(getaprilpose(6, 13,-24,-90))
+                                    .lineToLinearHeading(getaprilpose(6, 15,-24,-90, -25, 22))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
@@ -651,14 +668,14 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                                     .build();
 
                             drive.followTrajectorySequence(traj7);
-                            
+                            safeWaitSeconds(5);
                             traj3 = drive.trajectorySequenceBuilder(traj7.end())
-                                    .lineToLinearHeading(new Pose2d(19, 72, Math.toRadians(90)))
+                                    .lineToLinearHeading(new Pose2d(15, 72, Math.toRadians(90)))
                                     .build();
                             drive.followTrajectorySequence(traj3);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .lineToLinearHeading(getaprilpose(1,16,71,90))
+                                    .lineToLinearHeading(getaprilpose(1,15,71,90, 72, 21))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
@@ -692,14 +709,14 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                                 .build();
 
                         drive.followTrajectorySequence(traj7);
-                            
+                        safeWaitSeconds(5);
                         traj3 = drive.trajectorySequenceBuilder(traj7.end())
                                 .lineToLinearHeading(new Pose2d(26, 72, Math.toRadians(90)))
                                 .build();
                         drive.followTrajectorySequence(traj3);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .lineToLinearHeading(getaprilpose(2,26,71,90))
+                                    .lineToLinearHeading(getaprilpose(2,26,71,90, 72, 26))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
@@ -733,19 +750,19 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                                     .build();
 
                             drive.followTrajectorySequence(traj7);
-
+                            safeWaitSeconds(5);
                             traj3 = drive.trajectorySequenceBuilder(traj7.end())
                                     .lineToLinearHeading(new Pose2d(32, 72, Math.toRadians(90)))
                                     .build();
                             drive.followTrajectorySequence(traj3);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .lineToLinearHeading(getaprilpose(3,32,71,90))
+                                    .lineToLinearHeading(getaprilpose(3,32,71,90, 72, 32))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
                             break;
-                    }
+                    }safeWaitSeconds(1);
                 /*midwayPose1a = new Pose2d(30, -18, Math.toRadians(90));
                 intakeStack = new Pose2d(52, -19,Math.toRadians(90));
                 midwayPose2 = new Pose2d(47, -23, Math.toRadians(0));
@@ -778,14 +795,14 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                                     .build();
 
                             drive.followTrajectorySequence(traj7);
-
+                            safeWaitSeconds(5);
                             traj3 = drive.trajectorySequenceBuilder(traj7.end())
                                     .lineToLinearHeading(new Pose2d(26, -72, Math.toRadians(-90)))
                                     .build();
                             drive.followTrajectorySequence(traj3);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .lineToLinearHeading(getaprilpose(6,16,-71,-90))
+                                    .lineToLinearHeading(getaprilpose(6,16,-71,-90, -72, 25))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
@@ -819,14 +836,14 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                                     .build();
 
                             drive.followTrajectorySequence(traj7);
-
+                            safeWaitSeconds(5);
                             traj3 = drive.trajectorySequenceBuilder(traj7.end())
                                     .lineToLinearHeading(new Pose2d(33, -72, Math.toRadians(-90)))
                                     .build();
                             drive.followTrajectorySequence(traj3);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .lineToLinearHeading(getaprilpose(5,26,-71,-90))
+                                    .lineToLinearHeading(getaprilpose(5,27,-71,-90, -72, 33))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
@@ -858,32 +875,23 @@ public class FTCOpenSourceAutonomous extends LinearOpMode {
                                     .build();
 
                             drive.followTrajectorySequence(traj7);
-
+                            safeWaitSeconds(5);
                             traj3 = drive.trajectorySequenceBuilder(traj7.end())
                                     .lineToLinearHeading(new Pose2d(32, -72, Math.toRadians(-90)))
                                     .build();
                             drive.followTrajectorySequence(traj3);
                             armout();
                             traj8 = drive.trajectorySequenceBuilder(traj3.end())
-                                    .lineToLinearHeading(getaprilpose(4,32,-71,-90))
+                                    .lineToLinearHeading(getaprilpose(4,28,-71,-90, -72, 32))
                                     .build();
                             drive.followTrajectorySequence(traj8);
                             drop();
                             break;
-                    }
+                    } safeWaitSeconds(2);
                     break;
             }
             break;
         }
-
-
-        //TODO : Code to drop Pixel on Backdrop
-        /*elbow1.setPosition(0);
-        wristy.setPosition(13/355);
-        safeWaitSeconds(1 );
-        grabby.setPosition(1);
-        safeWaitSeconds(.4 );
-*/
     }
 
 
