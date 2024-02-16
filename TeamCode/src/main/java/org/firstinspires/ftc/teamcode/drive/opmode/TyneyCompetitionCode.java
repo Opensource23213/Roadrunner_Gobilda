@@ -52,10 +52,10 @@ public class TyneyCompetitionCode extends LinearOpMode {
     private DcMotor Arm2 = null;
 
     private Servo elbow1;
-    private Servo wristy;
     private Servo mustaches;
     private Servo ilifty;
     private Servo grabby;
+    private Servo wristy;
 
     private CRServo spinny;
     private Servo flippy;
@@ -97,6 +97,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
         sensorDistance2 = hardwareMap.get(DistanceSensor.class, "sensorDistance2");
         Rev2mDistanceSensor sensorTimeOfFlight = (Rev2mDistanceSensor) sensorDistance;
         Rev2mDistanceSensor sensorTimeOfFlight2 = (Rev2mDistanceSensor) sensorDistance2;
+        double mult = .22;
         double serAdjust = 3;
 
         //Arm_Encoder = new Encoder(hardwareMap.get(DcMotorEx.class, "parallelEncoder"));
@@ -118,12 +119,14 @@ public class TyneyCompetitionCode extends LinearOpMode {
         Arm1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         Arm2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         elbow1.setDirection(Servo.Direction.REVERSE);
+        grabby.setDirection(Servo.Direction.REVERSE);
         lifty.setDirection(Servo.Direction.REVERSE);
         float wristOut = (float) ((float) .11 + serAdjust/355);
         float wristIn = (float) ((float) .6 + serAdjust/355);
-        wristy.setPosition(wristIn);
-        double grabIn = 1;
-        double grabOut = .85;
+        wristy.setPosition(wristIn * mult);
+        double grabIn = .97;
+        double grabOut = .75;
+        double grabOut2 = .6;
         grabby.setPosition(grabIn);
         float servoDegree = 1 / 355;
         spinny.setDirection(CRServo.Direction.FORWARD);  //intake
@@ -133,10 +136,9 @@ public class TyneyCompetitionCode extends LinearOpMode {
         double reInit = 0;
         double armInit = 2;
         lifty.setPosition(0);
-        mustaches.setPosition(.28
-        );
+        mustaches.setPosition(.28);
         ilifty.setPosition(.5);
-        double counter8 = 1;
+        double counter8 = 2;
 
 
         // Define hub orientation
@@ -146,6 +148,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
         RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(logoDirection, usbDirection);
         // Initialize the IMU with this mounting orientation
         imu.initialize(new IMU.Parameters(orientationOnRobot));
+        
 
         telemetry.addData("Hub orientation", "Logo=%s   USB=%s\n ", logoDirection, usbDirection);
         // Wait for the game to start (driver presses PLAY)
@@ -161,7 +164,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
         double ticksinch = ticks * 83.16;
         double ticksfoot = ticksinch * 12;
         double max;
-        double power_level = .8;
+        double power_level = 1;
         double Pi = 3.1415926 / 2;
         int Drive_Mode = 2;
         double dis2 = 1;
@@ -197,13 +200,25 @@ public class TyneyCompetitionCode extends LinearOpMode {
         double ymove = 1;
         double count = 1;
         ElapsedTime timer = new ElapsedTime(SECONDS);
+        double pypress = 1;
+        double sypress = 0;
+        double countback = 0;
+        double topose = 2;
+        double end = 1;
+        double rsb = 1;
+        double pixgrab = 1;
+        double pixgrab2 = 1;
+        double typress = 1;
+        double yes = 1;
+        double once = 1;
+        double roboyaw = 1;
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             double dis = (sensorDistance.getDistance(DistanceUnit.INCH) + sensorDistance2.getDistance(DistanceUnit.INCH))/2;
             // servo position in degrees
             double elbowDegree = elbow1.getPosition() * 355;
-            double wristDegree = wristy.getPosition() * 355 + serAdjust;
+            double wristDegree = (wristy.getPosition() * 355 + serAdjust) * mult;
 
             //Variables Like Arm and Yaw
             // Setup a variable for each drive wheel to save power level for telemetry
@@ -229,7 +244,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
             double yaw = gamepad1.right_stick_x / (gamepad1.left_trigger + 1);
 
             // joysticks on gamepad2 for arm
-            double arm = gamepad2.left_stick_y/1.5; //power reduced to 50%
+            double arm = gamepad2.left_stick_y/1.5; //power reduced to 25%
             double elbow = gamepad2.right_stick_y;
 
             // Eliminate stick drift
@@ -264,6 +279,21 @@ public class TyneyCompetitionCode extends LinearOpMode {
                 lifty.setPosition(0);
                 shootcount = 0;
             }
+            if (gamepad1.x){
+                pixgrab = 2;
+            }
+            if(!gamepad1.x && pixgrab == 2){
+                if (pixgrab2 == 1){
+                    mustaches.setPosition(.68);
+                    spinny.setPower(-1);
+                    pixgrab2 = 2;
+                }else {
+                    mustaches.setPosition(.426666);
+                    spinny.setPower(0);
+                    pixgrab2 = 1;
+                }
+                pixgrab = 1;
+            }
             //Set Drive Mode
            /* if (gamepad1.x && xPress1 == 1) {  // Field Centric
                 Drive_Mode = 1;
@@ -277,13 +307,11 @@ public class TyneyCompetitionCode extends LinearOpMode {
             //deactivate and activate Intake
             if (gamepad1.a) {
                 ilifty.setPosition(.5);
-                flippydoo = pickflip;
+                flippydoo = .32;
                 spinny.setPower(0);
                 yPress = 1;
                 mustaches.setPosition(.332);
-            }
-            if (gamepad1.y && gamepad1.left_trigger > .4){
-                mustaches.setPosition(mustaches.getPosition() + .01);
+
             }
             if (gamepad1.right_trigger > .4 && gamepad1.y) {
                 flippydoo = .44;
@@ -305,9 +333,9 @@ public class TyneyCompetitionCode extends LinearOpMode {
                     }
                 }
             }
-            if (count >= 2 && count <= 18){
+            if (count >= 2 && count <= 25){
                 count += 1;
-            }else if(count >= 19){
+            }else if(count >= 26){
                 mustaches.setPosition(.28);
                 ilifty.setPosition(.5);
                 count = 1;
@@ -317,168 +345,292 @@ public class TyneyCompetitionCode extends LinearOpMode {
             }
             flippy.setPosition(flippydoo); //Moves flipper to position set on line 222 or 226
 
-            // Field Centric Calculations
-            double yaw_rad = orientation.getYaw(AngleUnit.RADIANS) + Pi;
-            double temp = axial * Math.sin(yaw_rad) + lateral * Math.cos(yaw_rad);
-            lateral = -axial * Math.cos(yaw_rad) + lateral * Math.sin(yaw_rad);
-            //double temp = axial * Math.cos(yaw_rad) + lateral * Math.sin(yaw_rad);
-            //lateral = -axial * Math.sin(yaw_rad) + lateral * Math.cos(yaw_rad);
-            axial = temp;
 
-            // Combine the joystick requests for each axis-motion to determine each wheel's power.
-            // Set up a variable for each drive wheel to save the power level for telemetry.
-            double leftFrontPower = (axial + lateral + yaw) * power_level;
-            double rightFrontPower = (axial - lateral - yaw) * power_level;
-            double leftBackPower = (axial - lateral + yaw) * power_level;
-            double rightBackPower = (axial + lateral - yaw) * power_level;
-
-            // Normalize the values so no wheel power exceeds 100%
-            // This ensures that the robot maintains the desired motion.
-            max = Math.max(abs(leftFrontPower), abs(rightFrontPower));
-            max = Math.max(max, abs(leftBackPower));
-            max = Math.max(max, abs(rightBackPower));
-
-            if (max > 1.0) {
-                leftFrontPower /= max;
-                rightFrontPower /= max;
-                leftBackPower /= max;
-                rightBackPower /= max;
+            if(gamepad2.left_bumper){
+                typress = 2;
             }
-
             // Send calculated power to wheels
+            if (gamepad2.x) {
+                if (gamepad2.left_trigger > .4) {  //Pick Pixels
+                    xpress = 2;
+                    grabby.setPosition(grabIn);
+                    wristy.setPosition((float) ((float) .67 * mult));
+                    flippydoo = .23;
+                    flippy.setPosition(.23);
 
-
-            if(grabOpen == 2) {
-                dis2 = dis + .35;
-                grabOpen = 3;
+                } else {  //Gripper open and close
+                    pypress = 2;
+                }
             }
-
+            if (!gamepad2.x && pypress == 2){
+                if (sypress == 0){
+                    sypress = 1;
+                    grabby.setPosition(grabOut);
+                    countback = 0;
+                    pypress = 3;
+                }
+                else if (sypress == 1){
+                    sypress = 2;
+                    grabby.setPosition(grabIn);
+                    countback = 0;
+                    pypress = 3;
+                }
+            }
+            if(!gamepad2.left_bumper && typress == 2){
+                grabby.setPosition(grabOut);
+                countback = 0;
+                typress = 4;
+            }
             // D pad used to move the robot
             if(xPress1 == 1 && bPress == 1){
-                if(grabOpen == 3 && ymove == 1) {
-                    if (grabOpen == 3) {
-                        if (dis2 > dis) {
-                            front_left.setPower(-.2);
-                            front_right.setPower(-.2);
-                            rear_left.setPower(-.2);
-                            rear_right.setPower(-.2);
-                        } else {
-                            grabOpen = 4;
+                yes = 2;
+                if (pypress == 3){
+                    while (countback < 8){
+                        if (ypress == 3) {
+                            front_left.setPower(.6);
+                            front_right.setPower(.6);
+                            rear_left.setPower(.6);
+                            rear_right.setPower(.6);
+                        }else{
+                            front_left.setPower(-.6);
+                            front_right.setPower(-.6);
+                            rear_left.setPower(-.6);
+                            rear_right.setPower(-.6);
                         }
+                        sleep(100);
+                        countback = 8;
+
                     }
-                } else if (grabOpen == 3 && ymove == 2) {
-                    grabOpen = 4;
-                } else if(gamepad1.dpad_left){
+                    if (countback > 7) {
+                        axial = -gamepad1.left_stick_y / (gamepad1.left_trigger + 1);  // Note: pushing stick forward gives negative value
+                        lateral = gamepad1.left_stick_x / (gamepad1.left_trigger + 1);
+                        yaw = gamepad1.right_stick_x / (gamepad1.left_trigger + 1);
+                        yes = 1;
+                        pypress = 1;
+                    }
+                }else if (typress == 4){
+                    while (countback < 5){
+                        if (ypress == 3) {
+                            front_left.setPower(.6);
+                            front_right.setPower(.6);
+                            rear_left.setPower(.6);
+                            rear_right.setPower(.6);
+                        }else{
+                            front_left.setPower(-.6);
+                            front_right.setPower(-.6);
+                            rear_left.setPower(-.6);
+                            rear_right.setPower(-.6);
+                        }
+                        sleep(110);
+                        countback = 6;
+
+                    }
+                    while (countback < 8){
+                        if (ypress == 3) {
+                            front_left.setPower(-.6);
+                            front_right.setPower(-.6);
+                            rear_left.setPower(-.6);
+                            rear_right.setPower(-.6);
+                        }else{
+                            front_left.setPower(.6);
+                            front_right.setPower(.6);
+                            rear_left.setPower(.6);
+                            rear_right.setPower(.6);
+                        }
+                        sleep(110);
+                        countback = 8;
+
+                    }
+                    if (countback > 7) {
+                        grabby.setPosition(grabIn);
+                        if (ypress == 3) {
+                            front_left.setPower(.6);
+                            front_right.setPower(.6);
+                            rear_left.setPower(.6);
+                            rear_right.setPower(.6);
+                        } else {
+                            front_left.setPower(-.6);
+                            front_right.setPower(-.6);
+                            rear_left.setPower(-.6);
+                            rear_right.setPower(-.6);
+                        }
+                        sleep(110);
+                        countback = 9;
+                    }
+                    if (countback > 8){
+                        axial = -gamepad1.left_stick_y / (gamepad1.left_trigger + 1);  // Note: pushing stick forward gives negative value
+                        lateral = gamepad1.left_stick_x / (gamepad1.left_trigger + 1);
+                        yaw = gamepad1.right_stick_x / (gamepad1.left_trigger + 1);
+                        yes = 1;
+                        typress = 1;
+                    }
+                }
+                else if(gamepad1.dpad_left){
                     if (ymove == 1) {
                         if (gamepad1.right_trigger > .4) {
-                            front_left.setPower(-.71);
-                            front_right.setPower(.71);
-                            rear_left.setPower(.7);
-                            rear_right.setPower(-.7);
+                            axial = 0;
+                            lateral = -.8;
+                            yaw = 0;
                         } else {
-                            front_left.setPower(-.31);
-                            front_right.setPower(.31);
-                            rear_left.setPower(.3);
-                            rear_right.setPower(-.3);
+                            axial = 0;
+                            lateral = -.5;
+                            yaw = 0;
                         }
                     }else{
                         if (gamepad1.right_trigger > .4) {
-                            front_left.setPower(.7);
-                            front_right.setPower(-.7);
-                            rear_left.setPower(-.8);
-                            rear_right.setPower(.8);
+                            axial = 0;
+                            lateral = .8;
+                            yaw = 0;
                         }else {
-                            front_left.setPower(.3);
-                            front_right.setPower(-.3);
-                            rear_left.setPower(-.4);
-                            rear_right.setPower(.4);
+                            axial = 0;
+                            lateral = .5;
+                            yaw = 0;
                         }
                     }
                 }else if(gamepad1.dpad_right){
                     if(ymove == 1) {
                         if (gamepad1.right_trigger > .4) {
-                            front_left.setPower(.71);
-                            front_right.setPower(-.71);
-                            rear_left.setPower(-.7);
-                            rear_right.setPower(.7);
+                            axial = 0;
+                            lateral = .8;
+                            yaw = 0;
                         } else {
-                            front_left.setPower(.31);
-                            front_right.setPower(-.31);
-                            rear_left.setPower(-.3);
-                            rear_right.setPower(.3);
+                            axial = 0;
+                            lateral = .5;
+                            yaw = 0;
                         }
                     }else {
                         if (gamepad1.right_trigger > .4) {
-                            front_left.setPower(-.7);
-                            front_right.setPower(.7);
-                            rear_left.setPower(.8);
-                            rear_right.setPower(-.8);
+                            axial = 0;
+                            lateral = -.8;
+                            yaw = 0;
                         } else {
-                            front_left.setPower(-.3);
-                            front_right.setPower(.3);
-                            rear_left.setPower(.4);
-                            rear_right.setPower(-.4);
+                            axial = 0;
+                            lateral = -.5;
+                            yaw = 0;
 
                         }
                     }
                 }else if(gamepad1.dpad_up){
-                    if (gamepad1.right_trigger > .4) {
-                        front_left.setPower(.7);
-                        front_right.setPower(.7);
-                        rear_left.setPower(.7);
-                        rear_right.setPower(.7);
-                    }else{
-                        front_left.setPower(.3);
-                        front_right.setPower(.3);
-                        rear_left.setPower(.3);
-                        rear_right.setPower(.3);
+                    if(ymove == 1) {
+                        if (gamepad1.right_trigger > .4) {
+                            axial = .8;
+                            lateral = 0;
+                            yaw = 0;
+                        } else {
+                            axial = .5;
+                            lateral = 0;
+                            yaw = 0;
+                        }
+                    }else {
+                        if (gamepad1.right_trigger > .4) {
+                            axial = -.8;
+                            lateral = 0;
+                            yaw = 0;
+                        } else {
+                            axial = -.5;
+                            lateral = 0;
+                            yaw = 0;
+                        }
                     }
                 }else if(gamepad1.dpad_down) {
-                    if (gamepad1.right_trigger > .4) {
-                        front_left.setPower(-.7);
-                        front_right.setPower(-.7);
-                        rear_left.setPower(-.7);
-                        rear_right.setPower(-.7);
-                    } else {
-                        front_left.setPower(-.3);
-                        front_right.setPower(-.3);
-                        rear_left.setPower(-.3);
-                        rear_right.setPower(-.3);
+                    if(ymove != 1) {
+                        if (gamepad1.right_trigger > .4) {
+                            axial = .8;
+                            lateral = 0;
+                            yaw = 0;
+                        } else {
+                            axial = .5;
+                            lateral = 0;
+                            yaw = 0;
+                        }
+                    }else {
+                        if (gamepad1.right_trigger > .4) {
+                            axial = -.8;
+                            lateral = 0;
+                            yaw = 0;
+                        } else {
+                            axial = -.5;
+                            lateral = 0;
+                            yaw = 0;
+                        }
                     }
                 }else{
-                    front_left.setPower(leftFrontPower);
-                    front_right.setPower(rightFrontPower);
-                    rear_left.setPower(leftBackPower);
-                    rear_right.setPower(rightBackPower);
+                    axial = -gamepad1.left_stick_y / (gamepad1.left_trigger + 1);  // Note: pushing stick forward gives negative value
+                    lateral = gamepad1.left_stick_x / (gamepad1.left_trigger + 1);
+                    yaw = gamepad1.right_stick_x / (gamepad1.left_trigger + 1);
+                    yes = 1;
                 }
             }
 
 
+// Field Centric Calculations
+            double leftFrontPower = (axial + lateral + yaw) * power_level;
+            double rightFrontPower = (axial - lateral - yaw) * power_level;
+            double leftBackPower = (axial - lateral + yaw) * power_level;
+            double rightBackPower = (axial + lateral - yaw) * power_level;
 
+            if (yes == 2){
+                if (once == 1) {
+                    roboyaw = orientation.getYaw(AngleUnit.DEGREES);
+                    once = 2;
+                }
+                double angdif = orientation.getYaw(AngleUnit.DEGREES) - roboyaw;
+                // Combine the joystick requests for each axis-motion to determine each wheel's power.
+                // Set up a variable for each drive wheel to save the power level for telemetry.
+                leftFrontPower = (axial + lateral + (yaw + angdif * .02)) * power_level;
+                rightFrontPower = (axial - lateral - (yaw + angdif * .02)) * power_level;
+                leftBackPower = (axial - lateral + (yaw + angdif * .02)) * power_level;
+                rightBackPower = (axial + lateral - (yaw + angdif * .02)) * power_level;
 
+                // Normalize the values so no wheel power exceeds 100%
+                // This ensures that the robot maintains the desired motion.
+                max = Math.max(abs(leftFrontPower), abs(rightFrontPower));
+                max = Math.max(max, abs(leftBackPower));
+                max = Math.max(max, abs(rightBackPower));
+
+                if (max > 1.0) {
+                    leftFrontPower /= max;
+                    rightFrontPower /= max;
+                    leftBackPower /= max;
+                    rightBackPower /= max;
+                }
+            }else{
+                once = 1;
+                double yaw_rad = orientation.getYaw(AngleUnit.RADIANS) + Pi;
+                double temp = axial * Math.sin(yaw_rad) + lateral * Math.cos(yaw_rad);
+                lateral = -axial * Math.cos(yaw_rad) + lateral * Math.sin(yaw_rad);
+                //double temp = axial * Math.cos(yaw_rad) + lateral * Math.sin(yaw_rad);
+                //lateral = -axial * Math.sin(yaw_rad) + lateral * Math.cos(yaw_rad);
+                axial = temp;
+
+                // Combine the joystick requests for each axis-motion to determine each wheel's power.
+                // Set up a variable for each drive wheel to save the power level for telemetry.
+                leftFrontPower = (axial + lateral + yaw) * power_level;
+                rightFrontPower = (axial - lateral - yaw) * power_level;
+                leftBackPower = (axial - lateral + yaw) * power_level;
+                rightBackPower = (axial + lateral - yaw) * power_level;
+
+                // Normalize the values so no wheel power exceeds 100%
+                // This ensures that the robot maintains the desired motion.
+                max = Math.max(abs(leftFrontPower), abs(rightFrontPower));
+                max = Math.max(max, abs(leftBackPower));
+                max = Math.max(max, abs(rightBackPower));
+
+                if (max > 1.0) {
+                    leftFrontPower /= max;
+                    rightFrontPower /= max;
+                    leftBackPower /= max;
+                    rightBackPower /= max;
+                }
+            }
             //Arm code Shoulder
 
-            if (gamepad2.x) {
-                if (gamepad2.left_trigger > .4) {  //Pick Pixels
-                    xpress = 2;
-                    grabby.setPosition(grabIn);
-                    wristy.setPosition((float) ((float) .67));
-                    flippydoo = .23;
-                    flippy.setPosition(.23);
+            front_left.setPower(leftFrontPower);
+            front_right.setPower(rightFrontPower);
+            rear_left.setPower(leftBackPower);
+            rear_right.setPower(rightBackPower);
 
-                } else {  //Gripper open and close
-                    grabby.setPosition(grabIn);
-                    grabOpen = 1;
-                    counter2 = 0;
 
-                }
-            }
-            if (grabOpen == 1){
-                if (!gamepad2.x){
-                    xopen += 1;
-                    grabOpen = 2;
-                }
-            }
             if (gamepad2.a) { //Low score position
                 // Pick
                 if(gamepad2.left_trigger > .4 && gamepad2.a){
@@ -488,11 +640,12 @@ public class TyneyCompetitionCode extends LinearOpMode {
                     pixelbut = 2;
                 }
                 else if(pixelbut == 0){
+                    topose = 2;
                     xopen = 0;
                     ymove = 1;
                     ypress = 1;
-                    position = -7;
                     apress = 2;
+                    position = 3;
                 }
             }
             if (pixelbut == 1 && !gamepad2.a){
@@ -503,25 +656,44 @@ public class TyneyCompetitionCode extends LinearOpMode {
                 position -= 5;
                 pixelbut = 0;
             }
+            if(gamepad2.right_stick_button){
+                rsb = 2;
+            }
+            if(!gamepad2.right_stick_button && rsb == 2){
+                if(end == 2){
+                    end = 1;
+                    topose = 1;
+                    rsb = 1;
+                }else {
+                    end = 2;
+                    topose = 2;
+                    rsb = 1;
+                }
+            }
             if (gamepad2.b) { // Pounce position
+                topose = 2;
                 ypress = 1;
                 ymove = 1;
                 xopen = 0;
                 grabby.setPosition(grabIn);
                 serPosition = .91;
-                wristy.setPosition((float) ((float) .67));
-                grabby.setPosition(1);
+                wristy.setPosition(.67 * mult);
+                grabby.setPosition(grabIn);
                 position = -10;
-
+                counter8 = 0;
                 bpress = 2;
 
             }
             if (gamepad2.y) {
                 // Play
-                position = 125;
-                ymove = 2;
-                ypress = 2;
+                if (xpress == 1){
+                    topose = 2;
+                    position = 125;
+                    ymove = 2;
+                    ypress = 2;
+                }
             }
+
             // pick pixels
             else if (xpress == 2) {
                 flippy.setPosition(.20);
@@ -533,7 +705,8 @@ public class TyneyCompetitionCode extends LinearOpMode {
                 xpress = 4;
                 counter3 = 0;
             } else if (xpress == 4 && timer.time() > .55) {
-                grabby.setPosition(grabOut);
+                sypress = 0;
+                grabby.setPosition(grabOut2);
                 xpress = 5;
                 counter3 = 0;
             } else if (xpress == 5 && timer.time() > .75) {
@@ -545,32 +718,30 @@ public class TyneyCompetitionCode extends LinearOpMode {
                 serPosition = .91;
                 xpress = 1;
                 counter3 = 0;
-                wristy.setPosition(wristIn);
-            }
-            if (grabOpen == 4) {
-                grabby.setPosition(grabOut);
-                grabOpen = 5;
+                wristy.setPosition((float) ((float) .67 * mult));
             }
             // kinematics for a
             if (gamepad2.right_bumper) {
-                wristy.setPosition(0);
                 grabby.setPosition(grabIn);
             }else{
-                if (armAngle > -10 && ypress != 3 && xpress < 2 && serPosition == 0) { // Wrist 0 = Out
-                    wristy.setPosition((20 + serAdjust + -5 * 1.4 - armAngle * 1.4) / 355);
-                    arm *= .5;
+                if (armAngle > -10 && ypress != 2 && xpress < 2 && serPosition == 0 && ypress != 3) { // Wrist 0 = Out
+                    wristy.setPosition(((68 + serAdjust + -5 * 1.4 - armAngle * 1.4) / 355) * mult);
+                    arm *= .7;
                 }
             }
 
             // kinematics for y
             if (ypress == 3 && armAngle >= -10 && xpress < 2) {
                 // serPosition = (elbowTyney + shoulderTyney * 13 - armAngle * 13) / 355;  //elbow
-                wristy.setPosition((wristTyney + serAdjust + 99 * 1.2 - armAngle * 1.2) / 355);  //wrist
+                wristy.setPosition(((172 + serAdjust + 99 * 1.2 - armAngle * 1.2) / 355) * mult);  //wrist
                 arm /= 3;
             }
             if (ypress != 3 && xpress >= 2) {
                 // serPosition = (elbowTyney + shoulderTyney * 13 - armAngle * 13) / 355;  //elbow
-                wristy.setPosition((float) ((float) .67));
+                wristy.setPosition((float) ((float) .67 * mult));
+            }
+            if (end == 2){
+                arm *= 1.5;
             }
             // b movement
             if (bpress == 2 && counter < 15) {
@@ -581,22 +752,43 @@ public class TyneyCompetitionCode extends LinearOpMode {
                 counter = 0;
                 bpress = 1;
                 if (apress == 3) {
-                    position = -5 ;
+                    topose = 2;
                     apress = 1;
                 }
-                if (gamepad2.left_stick_y > .2 || gamepad2.left_stick_y < -.2) {
-                    Arm1.setPower(arm);
-                    Arm2.setPower(arm);
-                    position = armAngle;
+                if (topose == 1) {
+                    if ((gamepad2.left_stick_y > .2 || gamepad2.left_stick_y < -.2) && ymove == 1) {
+                        Arm1.setPower(arm);
+                        Arm2.setPower(arm);
+                        position = armAngle;
+                    }else if((gamepad2.left_stick_y > .2 || gamepad2.left_stick_y < -.2) && ymove != 1){
+                        Arm1.setPower(-arm);
+                        Arm2.setPower(-arm);
+                        position = armAngle;
+                    }
+                    else{
+                        Arm1.setPower(0);
+                        Arm2.setPower(0);
+                        if (end == 2){
+                            topose = 2;
+                        }
+                    }
                 } else {
                     if (position < armAngle + 1 && position > armAngle - 1) {// Stop arm movement within a 4 degree range
                         Arm1.setPower(0);
                         Arm2.setPower(0);
                         if (apress == 2) {
                             serPosition = 0;
-                            wristy.setPosition(wristOut);
+                            wristy.setPosition(wristOut * mult);
                             apress = 3;
                         }
+                        if(end == 1 || end == 2 && gamepad2.left_stick_y > .2 || end == 2 && gamepad2.left_stick_y < -.2) {
+                            if (counter8 < 2) {
+                                counter8 += 1;
+                            } else {
+                                topose = 1;
+                            }
+                        }
+
 
                     } else if (position > armAngle + 11 || position < armAngle - 11) {//  Far and fast arm move into position within an infinite range
                         if (position < armAngle) {
@@ -608,8 +800,8 @@ public class TyneyCompetitionCode extends LinearOpMode {
                             Arm2.setPower(-1);
                         }
                         if (ypress == 2) {
+                            grabby.setPosition(grabOut2);
                             serPosition = elbowTyney;
-                            wristy.setPosition(wristTyney + serAdjust/355);
                             ypress = 3;
                         }
                     } else { //Close and slow arm move into position if arm is in a 16 degree range
@@ -643,7 +835,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
             telemetry.addLine("");
             telemetry.addData("Shoulder Arm", "Angle: " + armAngle);
             telemetry.addData("Elbow Joint", "Value: " + elbow);
-            telemetry.addData("Wrist", wristy.getPosition() * 355 + serAdjust);
+            telemetry.addData("Wrist", (wristy.getPosition() * 355 + serAdjust)* mult);
             telemetry.addLine("");
             telemetry.addLine("Drive Train Values:");
             telemetry.addLine("");
@@ -651,6 +843,7 @@ public class TyneyCompetitionCode extends LinearOpMode {
             telemetry.addData("Front left/Right: ", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right: ", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.addData("Spinny Speed: ", "%4.2f", leftFrontPower);
+            telemetry.addData("Grabby Position: ", mustaches.getPosition());
             telemetry.addLine("");
             telemetry.addLine("Angles:");
             telemetry.addLine("");

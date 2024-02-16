@@ -8,6 +8,7 @@ import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -32,6 +33,7 @@ import java.util.List;
 /**
  * FFTCOpenSourceAutonomouss Example for only vision detection using tensorflow and park
  */
+@Disabled
 @Autonomous(name = "FTCOpenSourceAutonomouswAprilTagsl", group = "00-Autonomous", preselectTeleOp = "TyneyCompetitionCode")
 public class FTCOpenSourceAutonomouswApriTagsl extends LinearOpMode {
 
